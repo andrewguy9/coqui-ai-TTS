@@ -1,30 +1,9 @@
 from docopt import docopt
+from functional_tools import juxt
 from pathlib import Path
-import torch
 from typing import Generator
 import whisper
-
-def walk_paths(path_str: str) -> Generator[Path, None, None]:
-    path = Path(path_str)
-    for p in path.rglob('*'):
-        yield p
-
-def get_file_extension(path: Path):
-    return path.suffix[1:] if path.suffix else ''
-
-def is_audio(path_str):
-    ext = get_file_extension(path_str).lower()
-    return ext in ('wav', 'mp3')
-
-def is_normal_file(path: Path):
-    return path.is_file()
-
-def make_extension_replacer(new_ext: str):
-    if not new_ext.startswith('.'):
-        new_ext = '.' + new_ext
-    def replacer(path: Path) -> Path:
-        return path.with_suffix(new_ext)
-    return replacer
+from path_utils import walk_paths, is_audio, is_normal_file, make_extension_replacer
 
 label_path = make_extension_replacer("txt")
 
@@ -33,18 +12,6 @@ def audio_labeler(model):
         result = model.transcribe(str(path), language="en", task="transcribe", fp16=False)
         return result['text']
     return label_audio
-
-def juxt(*fns):
-    """
-    Takes a set of functions and returns a fn that is the juxtaposition
-    of those fns.  The returned fn takes a variable number of args, and
-    returns a vector containing the result of applying each fn to the
-    args (left-to-right).
-    juxt(a b c)(x) => [a(x), b(x), c(x)]
-    """
-    def combined(*args, **kwargs):
-        return [fn(*args, **kwargs) for fn in fns]
-    return combined
 
 def persist_label(path: Path, text: str):
     with open(label_path(path), 'w') as f:
