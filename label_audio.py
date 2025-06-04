@@ -1,5 +1,6 @@
 from docopt import docopt
 from pathlib import Path
+import torch
 from typing import Generator
 import whisper
 
@@ -29,7 +30,7 @@ label_path = make_extension_replacer("txt")
 
 def audio_labeler(model):
     def label_audio(path: Path) -> str:
-        result = model.transcribe(str(path))
+        result = model.transcribe(str(path), language="en", task="transcribe", fp16=False)
         return result['text']
     return label_audio
 
@@ -49,16 +50,28 @@ def persist_label(path: Path, text: str):
     with open(label_path(path), 'w') as f:
         f.write(text)
 
+
+def log_wrapper(fn):
+    def inner(*args, **kwargs):
+        result = fn(*args, **kwargs)
+        print(f"Function {fn.__name__} called with args: {args}, kwargs: {kwargs}, returned: {result}")
+        return result
+    return inner
+
 def main(args):
-    model = whisper.load_model("base")
+    model = whisper.load_model("base", device="cpu")
+    model.float()
+
+
     label_fn = audio_labeler(model)
+    chatty_persist_label = log_wrapper(persist_label)
 
     file_paths = walk_paths(args['<input>'])
     audio_files = filter(is_audio, file_paths)
     existing_audio_files = filter(is_normal_file, audio_files)
     need_labels = filter(lambda p: not is_normal_file(label_path(p)), existing_audio_files)
     pts = map(juxt(label_path, label_fn), need_labels)
-    list(map(lambda pt: persist_label(*pt), pts))
+    list(map(lambda pt: chatty_persist_label(*pt), pts))
 
 USAGE = """
 Label Audio Files
