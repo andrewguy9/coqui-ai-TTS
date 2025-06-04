@@ -4,6 +4,29 @@ worth checking before going deeper.
 
 ## Using Coqui
 
+### What is the Coqui fork about and how to install it?
+
+The original Coqui package ([TTS](https://pypi.org/project/TTS/) on PyPI) had
+its last release in December 2023. It is strongly recommended to install this
+fork ([coqui-tts](https://pypi.org/project/coqui-tts/) on PyPI) instead for
+compatibility with recent Python and dependency versions. It also includes a
+large number of new features and bug fixes with many ongoing community
+contributions ([full
+changelogs](https://github.com/idiap/coqui-ai-TTS/releases)). We welcome any
+contributions and bug reports on
+[Github](https://github.com/idiap/coqui-ai-TTS).
+
+For general installation instructions see [this documentation](installation.md).
+If you previously tried to install the original package, e.g. with `pip install
+TTS`, you have to start with a new virtual environment or at least remove any
+trace of the original packages, they cannot be installed together:
+
+```bash
+pip uninstall TTS trainer coqpit
+pip cache purge
+pip install coqui-tts
+```
+
 ### Where does Coqui store downloaded models?
 
 The path to downloaded models is printed when running `tts --list_models`.
