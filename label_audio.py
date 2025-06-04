@@ -26,7 +26,7 @@ def log_wrapper(fn):
     return inner
 
 def main(args):
-    model = whisper.load_model("base", device="cpu")
+    model = whisper.load_model("large", device="cpu")
     model.float()
 
 
