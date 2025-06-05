@@ -53,7 +53,7 @@ def main(args):
     DATASETS_CONFIG_LIST = [config_dataset]
 
     # Define the path where XTTS v2.0.1 files will be downloaded
-    CHECKPOINTS_OUT_PATH = os.path.join(str(OUT_PATH), "XTTS_v2.0_original_model_files/")
+    CHECKPOINTS_OUT_PATH = str(os.path.join(str(OUT_PATH), "XTTS_v2.0_original_model_files/"))
     os.makedirs(CHECKPOINTS_OUT_PATH, exist_ok=True)
 
 
