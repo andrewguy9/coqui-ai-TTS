@@ -192,7 +192,9 @@ def main(args):
 
     print("TRAINING SAMPLES:")
     print(f"Number of training samples: {len(train_samples)}")
+    print("Example training sample:", train_samples[0])
     print(f"Number of evaluation samples: {len(eval_samples)}")
+    print("Example evaluation sample:", eval_samples[0])
 
     # init the trainer and 🚀
     trainer = Trainer(
