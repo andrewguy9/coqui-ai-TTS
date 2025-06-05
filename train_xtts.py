@@ -44,7 +44,7 @@ def main(args):
     config_dataset = BaseDatasetConfig(
         formatter="ljspeech",
         dataset_name=dataset_name,
-        path=dataset_path,
+        path=str(dataset_path),
         meta_file_train=metadata_path,
         language="en", # TODO option
     )
@@ -53,7 +53,7 @@ def main(args):
     DATASETS_CONFIG_LIST = [config_dataset]
 
     # Define the path where XTTS v2.0.1 files will be downloaded
-    CHECKPOINTS_OUT_PATH = os.path.join(OUT_PATH, "XTTS_v2.0_original_model_files/")
+    CHECKPOINTS_OUT_PATH = os.path.join(str(OUT_PATH), "XTTS_v2.0_original_model_files/")
     os.makedirs(CHECKPOINTS_OUT_PATH, exist_ok=True)
 
 
@@ -119,7 +119,7 @@ def main(args):
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
     # training parameters config
     config = GPTTrainerConfig(
-        output_path=OUT_PATH,
+        output_path=str(OUT_PATH),
         model_args=model_args,
         run_name=RUN_NAME,
         project_name=PROJECT_NAME,
@@ -184,7 +184,7 @@ def main(args):
             grad_accum_steps=GRAD_ACUMM_STEPS,
         ),
         config,
-        output_path=OUT_PATH,
+        output_path=str(OUT_PATH),
         model=model,
         train_samples=train_samples,
         eval_samples=eval_samples,
