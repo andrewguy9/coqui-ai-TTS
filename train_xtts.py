@@ -45,9 +45,12 @@ def main(args):
         formatter="ljspeech",
         dataset_name=dataset_name,
         path=str(dataset_path),
-        meta_file_train=metadata_path,
+        meta_file_train=str(metadata_path.relative_to(dataset_path)),
         language="en", # TODO option
     )
+
+    print("DATASET CONFIGURATION:")
+    print(config_dataset)
 
     # Add here the configs of the datasets
     DATASETS_CONFIG_LIST = [config_dataset]
@@ -90,11 +93,13 @@ def main(args):
     # Training sentences generations
     # TODO find a reference from the training set.
     dataset_paths = walk_paths(dataset_path)
-    audio_paths = list(filter(is_audio, dataset_paths))
-    if len(audio_paths) == 0:
+    audio_paths = filter(is_audio, dataset_paths)
+    audio_path_strs = list(map(str, audio_paths))
+    if len(audio_path_strs) == 0:
         raise ValueError(f"No audio files found in the dataset path: {dataset_path}. Please check the dataset.")
 
-    SPEAKER_REFERENCE = [audio_paths[0]]
+    SPEAKER_REFERENCE = [audio_path_strs[0]]
+    print("SPEAKER_REFERENCE:", SPEAKER_REFERENCE, sep="\n")
     LANGUAGE = config_dataset.language
 
     # init args and config
@@ -114,9 +119,16 @@ def main(args):
         gpt_use_masking_gt_prompt_approach=True,
         gpt_use_perceiver_resampler=True,
     )
+
+    print("MODEL ARGS:")
+    print(model_args)
+
     # define audio config
     # TODO do we need to reformat the input audio files?
     audio_config = XttsAudioConfig(sample_rate=22050, dvae_sample_rate=22050, output_sample_rate=24000)
+    print("AUDIO CONFIG:")
+    print(audio_config)
+
     # training parameters config
     config = GPTTrainerConfig(
         output_path=str(OUT_PATH),
@@ -163,6 +175,9 @@ def main(args):
             },
         ],
     )
+
+    print("CONFIGURATION:")
+    print(config)
 
     # init the model from config
     model = GPTTrainer.init_from_config(config)
