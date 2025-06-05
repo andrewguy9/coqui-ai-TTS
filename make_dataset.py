@@ -14,7 +14,7 @@ def dataset_writer(output_path: Path):
             writer = csv.writer(csvfile, delimiter="|")
             for path, label in data:
                 relative = get_relative_path(cwd, path)
-                writer.writerow([str(relative), label])
+                writer.writerow([str(relative), label, label])
     return writer
 
 def load_tag(path: Path) -> str:
