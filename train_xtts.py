@@ -190,6 +190,10 @@ def main(args):
         eval_split_size=config.eval_split_size,
     )
 
+    print("TRAINING SAMPLES:")
+    print(f"Number of training samples: {len(train_samples)}")
+    print(f"Number of evaluation samples: {len(eval_samples)}")
+
     # init the trainer and 🚀
     trainer = Trainer(
         TrainerArgs(
