@@ -13,12 +13,13 @@ from docopt import docopt
 from path_utils import get_base_name, is_audio, walk_paths
 
 def main(args):
-    metadata_path = Path(args['<dataset>'])
+    dataset_path = Path(args['<dataset>'])
+    dataset_name = get_base_name(dataset_path)
+
+    metadata_path = dataset_path / "metadata.csv"
     if not metadata_path.exists():
         raise FileNotFoundError(f"Dataset metadata file not found: {metadata_path}")
 
-    dataset_path = metadata_path.parent
-    dataset_name = get_base_name(dataset_path)
     print(f"Using dataset: {dataset_name} from path: {dataset_path} with metadata: {metadata_path}")
 
     # setup variables
