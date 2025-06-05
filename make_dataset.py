@@ -2,26 +2,39 @@ from typing import List
 from docopt import docopt
 from functional_tools import identity, juxt, uniq
 from path_utils import get_parent_path, get_relative_path, is_audio, walk_paths, is_normal_file, make_extension_replacer
-from itertools import chain
+from itertools import chain, count
 from pathlib import Path
 
 import csv
 
-def dataset_writer(output_path: Path):
-    cwd = get_parent_path(output_path)
-    def writer(data: list[Path, str]):
-        with output_path.open('w', newline='') as csvfile:
+from shutil import copyfile
+
+def dataset_writer(metadata_path: Path, wav_dir: Path):
+    def writer(data: list[int, Path, str]):
+        with metadata_path.open('w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter="|")
-            for path, label in data:
-                relative = get_relative_path(cwd, path)
-                writer.writerow([str(relative), label, label])
+            for index, path, label in data:
+                path: Path
+                dst_path = wav_dir / f"{index:05d}.wav"
+                copyfile(path, dst_path)
+                writer.writerow([dst_path.stem, label, label])
     return writer
 
 def load_tag(path: Path) -> str:
   return path.read_text().strip()
 
-def make_dataset(output_path: Path, sources: List[Path]):
-    label_writer = dataset_writer(output_path)
+def make_dataset(output_dir: Path, sources: List[Path]):
+
+    if not output_dir.exists():
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+    metadata_path = output_dir / "metadata.csv"
+    wav_dir = output_dir / "wavs"
+    label_writer = dataset_writer(metadata_path, wav_dir)
+
+    if not wav_dir.exists():
+        wav_dir.mkdir(parents=True, exist_ok=True)
+
     label_path = make_extension_replacer("txt")
     path_pairs = juxt(identity, label_path)
 
@@ -33,7 +46,7 @@ def make_dataset(output_path: Path, sources: List[Path]):
     existing_audio_files = filter(is_normal_file, audio_files)
     file_pairs = map(path_pairs, existing_audio_files)
     valid_pairs = filter(lambda fp: is_normal_file(fp[0]) and is_normal_file(fp[1]), file_pairs)
-    path_labels = map(lambda pl: (pl[0], load_tag(pl[1])), valid_pairs)
+    path_labels = map(lambda pl, index: (index, pl[0], load_tag(pl[1])), valid_pairs, count())
     label_writer(path_labels)
 
 def main(args):
