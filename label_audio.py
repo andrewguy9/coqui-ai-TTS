@@ -26,9 +26,7 @@ def log_wrapper(fn):
     return inner
 
 def main(args):
-    model = whisper.load_model("large", device="cpu")
-    model.float()
-
+    model = whisper.load_model("large")
 
     label_fn = audio_labeler(model)
     chatty_persist_label = log_wrapper(persist_label)
