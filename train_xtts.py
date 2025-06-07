@@ -151,6 +151,7 @@ def main(args):
         plot_step=100,
         log_model_step=1000,
         save_step=10000,
+        epochs=80,
         save_n_checkpoints=1,
         save_checkpoints=True,
         # target_loss="loss",
