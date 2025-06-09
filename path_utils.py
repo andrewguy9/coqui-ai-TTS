@@ -14,7 +14,7 @@ def get_file_extension(path: Path):
 
 def is_audio(path_str):
     ext = get_file_extension(path_str).lower()
-    return ext in ('wav', 'mp3')
+    return ext in ('wav', 'mp3', 'ogg')
 
 def is_normal_file(path: Path):
     return path.is_file()
