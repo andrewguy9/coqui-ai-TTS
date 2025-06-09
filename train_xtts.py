@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import List
 
 from trainer import Trainer, TrainerArgs
 
@@ -12,6 +13,14 @@ from docopt import docopt
 
 from path_utils import get_base_name, is_audio, walk_paths
 
+def model_run_prefix(dataset_name: str) -> str:
+    return f"naqqal_{dataset_name}"
+
+def find_runs(dataset_name: str, run_dir: Path) -> List[Path]:
+    glob_pattern = f"{model_run_prefix(dataset_name)}*"
+    runs = list(run_dir.glob(glob_pattern))
+    return runs
+
 def main(args):
     dataset_path = Path(args['<dataset>'])
     dataset_name = get_base_name(dataset_path)
@@ -22,16 +31,25 @@ def main(args):
 
     print(f"Using dataset: {dataset_name} from path: {dataset_path} with metadata: {metadata_path}")
 
+    # Set here the path that the checkpoints will be saved. Default: ./run/training/
+    OUT_PATH_STR = args['--output']
+    OUT_PATH = Path(OUT_PATH_STR)
+
     # setup variables
     # Logging parameters
-    RUN_NAME = f"naqqal_{dataset_name}"
+    RUN_NAME = model_run_prefix(dataset_name)
+    RUNS = find_runs(dataset_name, OUT_PATH)
+    if len(RUNS) > 0:
+        print(f"Found existing runs: {RUNS}. Skipping...")
+        return
+    else:
+        print("No existing runs found. Proceeding with training...")
+
     PROJECT_NAME = "naqqal"
     DASHBOARD_LOGGER = "tensorboard"
     LOGGER_URI = None
 
     # TODO ouptut path
-    # Set here the path that the checkpoints will be saved. Default: ./run/training/
-    OUT_PATH = args['--output']
 
     # Training Parameters
     # TODO setup for multi gpu as option.
