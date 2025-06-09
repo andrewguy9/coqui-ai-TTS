@@ -21,8 +21,7 @@ def find_runs(dataset_name: str, run_dir: Path) -> List[Path]:
     runs = list(run_dir.glob(glob_pattern))
     return runs
 
-def main(args):
-    dataset_path = Path(args['<dataset>'])
+def train_voice(dataset_path: Path, training_dir: Path):
     dataset_name = get_base_name(dataset_path)
 
     metadata_path = dataset_path / "metadata.csv"
@@ -31,14 +30,10 @@ def main(args):
 
     print(f"Using dataset: {dataset_name} from path: {dataset_path} with metadata: {metadata_path}")
 
-    # Set here the path that the checkpoints will be saved. Default: ./run/training/
-    OUT_PATH_STR = args['--output']
-    OUT_PATH = Path(OUT_PATH_STR)
-
     # setup variables
     # Logging parameters
     RUN_NAME = model_run_prefix(dataset_name)
-    RUNS = find_runs(dataset_name, OUT_PATH)
+    RUNS = find_runs(dataset_name, training_dir)
     if len(RUNS) > 0:
         print(f"Found existing runs: {RUNS}. Skipping...")
         return
@@ -81,7 +76,7 @@ def main(args):
     DATASETS_CONFIG_LIST = [config_dataset]
 
     # Define the path where XTTS v2.0.1 files will be downloaded
-    CHECKPOINTS_OUT_PATH = str(os.path.join(str(OUT_PATH), "XTTS_v2.0_original_model_files/"))
+    CHECKPOINTS_OUT_PATH = str(os.path.join(str(training_dir), "XTTS_v2.0_original_model_files/"))
     os.makedirs(CHECKPOINTS_OUT_PATH, exist_ok=True)
 
 
@@ -156,7 +151,7 @@ def main(args):
 
     # training parameters config
     config = GPTTrainerConfig(
-        output_path=str(OUT_PATH),
+        output_path=str(training_dir),
         model_args=model_args,
         run_name=RUN_NAME,
         project_name=PROJECT_NAME,
@@ -232,13 +227,22 @@ def main(args):
             grad_accum_steps=GRAD_ACUMM_STEPS,
         ),
         config,
-        output_path=str(OUT_PATH),
+        output_path=str(training_dir),
         model=model,
         train_samples=train_samples,
         eval_samples=eval_samples,
         test_samples=config.test_sentences,
     )
     trainer.fit()
+
+def main(args):
+    dataset_path = Path(args['<dataset>'])
+
+    # Set here the path that the checkpoints will be saved. Default: ./run/training/
+    OUT_PATH_STR = args['--output']
+    OUT_PATH = Path(OUT_PATH_STR)
+
+    train_voice(dataset_path, OUT_PATH)
 
 
 USAGE = """
