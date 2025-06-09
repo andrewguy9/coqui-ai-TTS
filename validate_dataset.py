@@ -1,4 +1,4 @@
-from typing import Iterable, Iterator, Tuple
+from typing import Callable, Iterable, Iterator, List, Tuple
 from docopt import docopt
 from functional_tools import identity, juxt, uniq
 from pathlib import Path
@@ -42,31 +42,64 @@ def validate_sample_conditioning_length(r: DatasetSample) -> bool:
     seconds = get_audio_length(r)
     return min_conditioning_length <= seconds <= max_conditioning_length
 
+import spacy
+from spacy.matcher import Matcher
+
+nlp = spacy.load("en_core_web_sm")
+matcher = Matcher(nlp.vocab)
+
+# Pattern: any token containing a run of the same letter 4+ times
+matcher.add(
+    "OUTCRY",
+    [
+        [{"TEXT": {"REGEX": r"([A-Za-z!?.])\1{3,}"}}]
+    ]
+)
+
+def find_outcries(text):
+    doc = nlp(text)
+    matches = matcher(doc)
+    screams = [doc[start:end].text for _, start, end in matches]
+    return screams
+
+def validate_outcries(r: DatasetSample) -> bool:
+    _, text, _ = r
+    screams = find_outcries(text)
+    return len(screams) == 0
+
 def validate_all(r: DatasetSample) -> bool:
     return (validate_sample_text_length(r) and
             validate_sample_audio_length(r) and
-            validate_sample_conditioning_length(r))
+            validate_sample_conditioning_length(r) and
+            validate_outcries(r))
 
-def validate_dataset_records(samples: Iterable[DatasetSample]) -> None:
+
+training_validators = [
+    validate_sample_text_length,
+    validate_sample_audio_length,
+    validate_outcries,]
+conditioning_validators = [
+    validate_sample_conditioning_length,
+]
+
+def all_validators(validators: List[Callable[[DatasetSample], bool]]) -> Callable[[DatasetSample], bool]:
+    def combined_validator(sample: DatasetSample) -> bool:
+        return all(validator(sample) for validator in validators)
+    return combined_validator
+
+def validate_dataset_records(samples: Iterable[DatasetSample], validators: List[Callable[[DatasetSample], bool]]) -> None:
     samples = list(samples)
-    valid_text_lengt = list(map(validate_sample_text_length, samples))
-    valid_audio_length = list(map(validate_sample_audio_length, samples))
-    valid_conditioning_length = list(map(validate_sample_conditioning_length, samples))
-    all_valid = list(map(validate_all, samples))
-    pct_valid_text_length = sum(valid_text_lengt) / len(samples)
-    pct_valid_audio_length = sum(valid_audio_length) / len(samples)
-    pct_valid_conditioning_length = sum(valid_conditioning_length) / len(samples)
-    pct_all_valid = sum(all_valid) / len(samples)
-    print(f"Total samples: {len(samples)}")
-    print(f"Valid text length: {pct_valid_text_length:.2%}")
-    print(f"Valid audio length: {pct_valid_audio_length:.2%}")
-    print(f"Valid conditioning length: {pct_valid_conditioning_length:.2%}")
-    print(f"All valid: {pct_all_valid:.2%}")
+    combined = all_validators(validators)
+    
+    for validator in validators + [combined]:
+        valid_samples = list(map(validator, samples))
+        pct_valid = sum(valid_samples) / len(samples)
+        print(f"Valid samples for {validator.__name__}: {pct_valid:.2%}")
     
 def main(args):
     output_path = Path(args['<source>'])
 
-    validate_dataset_records(dataset_reader(output_path))
+    validate_dataset_records(dataset_reader(output_path), training_validators)
 
 USAGE = """
 Combine directories to produce a dataset.
