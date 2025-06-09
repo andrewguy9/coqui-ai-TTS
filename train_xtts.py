@@ -16,35 +16,37 @@ from path_utils import get_base_name, is_audio, walk_paths
 def model_run_prefix(dataset_name: str) -> str:
     return f"naqqal_{dataset_name}"
 
-def find_runs(dataset_name: str, run_dir: Path) -> List[Path]:
-    glob_pattern = f"{model_run_prefix(dataset_name)}*"
+def find_runs(run_name: str, run_dir: Path) -> List[Path]:
+    print("FINDING RUNS FOR DATASET:", run_name, "IN DIRECTORY:", run_dir)
+    glob_pattern = f"{run_name}*"
+    print("GLOB PATTERN:", glob_pattern)
     runs = list(run_dir.glob(glob_pattern))
     return runs
 
-def train_voice(dataset_path: Path, training_dir: Path):
+def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
+    # Define here the dataset that you want to use for the fine-tuning on.
     dataset_name = get_base_name(dataset_path)
 
     metadata_path = dataset_path / "metadata.csv"
     if not metadata_path.exists():
         raise FileNotFoundError(f"Dataset metadata file not found: {metadata_path}")
 
-    print(f"Using dataset: {dataset_name} from path: {dataset_path} with metadata: {metadata_path}")
+    config_dataset = BaseDatasetConfig(
+        formatter="ljspeech",
+        dataset_name=dataset_name,
+        path=str(dataset_path),
+        meta_file_train=str(metadata_path.relative_to(dataset_path)),
+        language="en", # TODO option
+    )
+    return config_dataset
 
+
+def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: Path):
     # setup variables
     # Logging parameters
-    RUN_NAME = model_run_prefix(dataset_name)
-    RUNS = find_runs(dataset_name, training_dir)
-    if len(RUNS) > 0:
-        print(f"Found existing runs: {RUNS}. Skipping...")
-        return
-    else:
-        print("No existing runs found. Proceeding with training...")
-
     PROJECT_NAME = "naqqal"
     DASHBOARD_LOGGER = "tensorboard"
     LOGGER_URI = None
-
-    # TODO ouptut path
 
     # Training Parameters
     # TODO setup for multi gpu as option.
@@ -54,18 +56,9 @@ def train_voice(dataset_path: Path, training_dir: Path):
     GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
     # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
 
-    # Define here the dataset that you want to use for the fine-tuning on.
-    config_dataset = BaseDatasetConfig(
-        formatter="ljspeech",
-        dataset_name=dataset_name,
-        path=str(dataset_path),
-        meta_file_train=str(metadata_path.relative_to(dataset_path)),
-        language="en", # TODO option
-    )
-
     dataset_size = len(config_dataset)
     if dataset_size == 0:
-        raise ValueError(f"No samples found in the dataset: {dataset_name}. Please check the dataset path and metadata file {dataset_path}.")
+        raise ValueError(f"No samples found in the dataset. Please check the dataset path and metadata file.")
     eval_size_pct = (dataset_size ** .5) / dataset_size
     if eval_size_pct * dataset_size < 2:
         raise ValueError(f"Dataset is too small ({dataset_size}) for evaluation.")
@@ -109,19 +102,6 @@ def train_voice(dataset_path: Path, training_dir: Path):
             [TOKENIZER_FILE_LINK, XTTS_CHECKPOINT_LINK], CHECKPOINTS_OUT_PATH, progress_bar=True
         )
 
-
-    # Training sentences generations
-    # TODO find a reference from the training set.
-    dataset_paths = walk_paths(dataset_path)
-    audio_paths = filter(is_audio, dataset_paths)
-    audio_path_strs = list(map(str, audio_paths))
-    if len(audio_path_strs) == 0:
-        raise ValueError(f"No audio files found in the dataset path: {dataset_path}. Please check the dataset.")
-
-    SPEAKER_REFERENCE = [audio_path_strs[0]]
-    print("SPEAKER_REFERENCE:", SPEAKER_REFERENCE, sep="\n")
-    LANGUAGE = config_dataset.language
-
     # init args and config
     model_args = GPTArgs(
         max_conditioning_length=132300,  # 6 secs
@@ -153,10 +133,10 @@ def train_voice(dataset_path: Path, training_dir: Path):
     config = GPTTrainerConfig(
         output_path=str(training_dir),
         model_args=model_args,
-        run_name=RUN_NAME,
+        run_name=run_name,
         project_name=PROJECT_NAME,
         run_description=f"""
-            GPT XTTS training on {dataset_name} dataset.
+            GPT XTTS training on {run_name} dataset.
             """,
         dashboard_logger=DASHBOARD_LOGGER,
         logger_uri=LOGGER_URI,
@@ -184,25 +164,7 @@ def train_voice(dataset_path: Path, training_dir: Path):
         lr_scheduler="MultiStepLR",
         # it was adjusted accordly for the new step scheme
         lr_scheduler_params={"milestones": [50000 * 18, 150000 * 18, 300000 * 18], "gamma": 0.5, "last_epoch": -1},
-        test_sentences=[
-            {
-                "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
-                "speaker_wav": SPEAKER_REFERENCE,
-                "language": LANGUAGE,
-            },
-            {
-                "text": "This cake is great. It's so delicious and moist.",
-                "speaker_wav": SPEAKER_REFERENCE,
-                "language": LANGUAGE,
-            },
-        ],
     )
-
-    print("CONFIGURATION:")
-    print(config)
-
-    # init the model from config
-    model = GPTTrainer.init_from_config(config)
 
     # load training samples
     train_samples, eval_samples = load_tts_samples(
@@ -217,6 +179,31 @@ def train_voice(dataset_path: Path, training_dir: Path):
     print("Example training sample:", train_samples[0])
     print(f"Number of evaluation samples: {len(eval_samples)}")
     print("Example evaluation sample:", eval_samples[0])
+
+    # Training sentences generations
+    # TODO is this the best reference?
+    SPEAKER_REFERENCE = train_samples[0]['audio_file']
+    print("SPEAKER_REFERENCE:", SPEAKER_REFERENCE, sep="\n")
+    LANGUAGE = config_dataset.language
+
+    config.test_sentences = [
+            {
+                "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": LANGUAGE,
+            },
+            {
+                "text": "This cake is great. It's so delicious and moist.",
+                "speaker_wav": SPEAKER_REFERENCE,
+                "language": LANGUAGE,
+            },
+        ]
+
+    print("CONFIGURATION:")
+    print(config)
+
+    # init the model from config
+    model = GPTTrainer.init_from_config(config)
 
     # init the trainer and 🚀
     trainer = Trainer(
@@ -237,13 +224,23 @@ def train_voice(dataset_path: Path, training_dir: Path):
 
 def main(args):
     dataset_path = Path(args['<dataset>'])
+    dataset_name = get_base_name(dataset_path)
+
 
     # Set here the path that the checkpoints will be saved. Default: ./run/training/
-    OUT_PATH_STR = args['--output']
-    OUT_PATH = Path(OUT_PATH_STR)
+    training_dir = Path(args['--output'])
 
-    train_voice(dataset_path, OUT_PATH)
+    run_name = model_run_prefix(dataset_name)
 
+    RUNS = find_runs(run_name, training_dir)
+    if len(RUNS) > 0:
+        print(f"Found existing runs: {RUNS}. Skipping...")
+        return
+    else:
+        print("No existing runs found. Proceeding with training...")
+
+    dataset_config = dataset_configuration(dataset_path)
+    train_voice(run_name, dataset_config, training_dir)
 
 USAGE = """
 Train GPT XTTS model.
