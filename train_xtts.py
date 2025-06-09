@@ -50,6 +50,12 @@ def main(args):
         language="en", # TODO option
     )
 
+    dataset_size = len(config_dataset)
+    if dataset_size == 0:
+        raise ValueError(f"No samples found in the dataset: {dataset_name}. Please check the dataset path and metadata file {dataset_path}.")
+    eval_size_pct = (dataset_size ** .5) / dataset_size
+    if eval_size_pct * dataset_size < 2:
+        raise ValueError(f"Dataset is too small ({dataset_size}) for evaluation.")
     print("DATASET CONFIGURATION:")
     print(config_dataset)
 
@@ -144,9 +150,11 @@ def main(args):
         audio=audio_config,
         batch_size=BATCH_SIZE,
         batch_group_size=48,
-        eval_batch_size=BATCH_SIZE,
         num_loader_workers=8,
-        eval_split_max_size=256,
+        eval_batch_size=BATCH_SIZE,
+        eval_split_max_size=None, # None is the default, allow the evaluation split to be as big as the training set.
+        eval_split_size = eval_size_pct,
+        print_eval=True,
         print_step=50,
         plot_step=100,
         log_model_step=1000,
@@ -155,7 +163,6 @@ def main(args):
         save_n_checkpoints=1,
         save_checkpoints=True,
         # target_loss="loss",
-        print_eval=False,
         # Optimizer values like tortoise, pytorch implementation with modifications to not apply WD to non-weight parameters.
         optimizer="AdamW",
         optimizer_wd_only_on_weights=OPTIMIZER_WD_ONLY_ON_WEIGHTS,
@@ -188,7 +195,7 @@ def main(args):
     train_samples, eval_samples = load_tts_samples(
         DATASETS_CONFIG_LIST,
         eval_split=True,
-        eval_split_max_size=config.eval_split_max_size,
+        eval_split_max_size=config.eval_split_max_size, # This was set to None, meaning the eval split can be as big as the training set.
         eval_split_size=config.eval_split_size,
     )
 
