@@ -14,8 +14,9 @@ def dataset_writer(metadata_path: Path, wav_dir: Path):
         with metadata_path.open('w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter="|")
             for index, path, label in data:
+                print(f"Copying {path} to {wav_dir / f'{index:05d}.wav'}")
                 path: Path
-                dst_path = wav_dir / f"{index:05d}.wav"
+                dst_path = wav_dir / f"{index:05d}.wav" # TODO they are not always wavs!
                 copyfile(path, dst_path)
                 writer.writerow([dst_path.stem, label, label])
     return writer
@@ -41,10 +42,8 @@ def make_dataset(output_dir: Path, sources: List[Path]):
     paths = chain(*map(walk_paths, sources))
     file_paths = filter(is_normal_file, paths)
     audio_paths = filter(is_audio, file_paths)
-    uniq_paths = uniq(audio_paths)
-    audio_files = filter(is_audio, uniq_paths)
-    existing_audio_files = filter(is_normal_file, audio_files)
-    file_pairs = map(path_pairs, existing_audio_files)
+    uniq_audio_paths = uniq(audio_paths)
+    file_pairs = map(path_pairs, uniq_audio_paths)
     valid_pairs = filter(lambda fp: is_normal_file(fp[0]) and is_normal_file(fp[1]), file_pairs)
     path_labels = map(lambda pl, index: (index, pl[0], load_tag(pl[1])), valid_pairs, count())
     label_writer(path_labels)
