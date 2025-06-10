@@ -52,7 +52,7 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     # TODO setup for multi gpu as option.
     OPTIMIZER_WD_ONLY_ON_WEIGHTS = True  # for multi-gpu training please make it False
     START_WITH_EVAL = True  # if True it will start with evaluation
-    BATCH_SIZE = 6  # set here the batch size
+    BATCH_SIZE = 12 # set here the batch size
     GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
     # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
 
@@ -136,7 +136,7 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
         run_name=run_name,
         project_name=PROJECT_NAME,
         run_description=f"""
-            GPT XTTS training on {run_name} dataset.
+            GPT XTTS training on {run_name} voice.
             """,
         dashboard_logger=DASHBOARD_LOGGER,
         logger_uri=LOGGER_URI,
