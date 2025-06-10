@@ -9,7 +9,7 @@ import csv
 
 from shutil import copyfile
 
-def dataset_writer(metadata_path: Path, wav_dir: Path):
+def trainingset_writer(metadata_path: Path, wav_dir: Path):
     def writer(data: list[int, Path, str]):
         with metadata_path.open('w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter="|")
@@ -24,14 +24,14 @@ def dataset_writer(metadata_path: Path, wav_dir: Path):
 def load_tag(path: Path) -> str:
   return path.read_text().strip()
 
-def make_dataset(output_dir: Path, sources: List[Path]):
+def trainingset_builder(output_dir: Path, sources: List[Path]):
 
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
     metadata_path = output_dir / "metadata.csv"
     wav_dir = output_dir / "wavs"
-    label_writer = dataset_writer(metadata_path, wav_dir)
+    label_writer = trainingset_writer(metadata_path, wav_dir)
 
     if not wav_dir.exists():
         wav_dir.mkdir(parents=True, exist_ok=True)
@@ -52,13 +52,13 @@ def main(args):
     output_path = args['<output>']
     sources = args['<source>']
 
-    make_dataset(Path(output_path), map(Path, sources))
+    trainingset_builder(Path(output_path), map(Path, sources))
 
 USAGE = """
-Combine directories to produce a dataset.
+Combine dataset directories to produce a trainingset.
 
 Usage:
-  make_dataset.py <output> <source>...
+  make_trainingset.py <output> <source>...
 """
 if __name__ == "__main__":
     args = docopt(USAGE)
