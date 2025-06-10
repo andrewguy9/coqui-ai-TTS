@@ -16,6 +16,7 @@ def audio_labeler(model):
 def persist_label(path: Path, text: str):
     with open(label_path(path), 'w') as f:
         f.write(text)
+        return path
 
 
 def log_wrapper(fn):
@@ -25,18 +26,23 @@ def log_wrapper(fn):
         return result
     return inner
 
-def main(args):
-    model = whisper.load_model("large")
-
-    label_fn = audio_labeler(model)
-    chatty_persist_label = log_wrapper(persist_label)
-
-    file_paths = walk_paths(args['<input>'])
+def label_under_path(label_fn, src: Path):
+    file_paths = walk_paths(src)
     audio_files = filter(is_audio, file_paths)
     existing_audio_files = filter(is_normal_file, audio_files)
     need_labels = filter(lambda p: not is_normal_file(label_path(p)), existing_audio_files)
     pts = map(juxt(label_path, label_fn), need_labels)
-    list(map(lambda pt: chatty_persist_label(*pt), pts))
+    written_paths = map(lambda pt: persist_label(*pt), pts)
+    yield from written_paths
+
+def main(args):
+    model = whisper.load_model("large")
+
+    label_fn = audio_labeler(model)
+
+    src = Path(args['<input>'])
+    for written in label_under_path(label_fn, src):
+        print(written)
 
 USAGE = """
 Label Audio Files
