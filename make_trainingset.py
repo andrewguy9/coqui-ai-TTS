@@ -60,7 +60,7 @@ def trainingset_builder(output_dir: Path, sources: List[Path]):
     path_pairs = map(mk_path_pairs, uniq_audio_paths)
     normal_pairs = filter(lambda fp: is_normal_file(fp[0]) and is_normal_file(fp[1]), path_pairs)
     path_labels: Iterator[Tuple[int, Path, str]] = map(lambda pl, index: (index, pl[0], load_tag(pl[1])), normal_pairs, count())
-    samples = map(mk_samples, path_labels)
+    samples = mk_samples(path_labels)
     valid_samples = filter(is_valid_training_sample, samples)
     label_writer(valid_samples)
 
