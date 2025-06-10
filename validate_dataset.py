@@ -79,6 +79,7 @@ training_validators = [
     validate_sample_audio_length,
     validate_outcries,]
 conditioning_validators = [
+    validate_outcries,
     validate_sample_conditioning_length,
 ]
 
