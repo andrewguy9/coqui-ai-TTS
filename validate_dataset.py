@@ -74,23 +74,23 @@ def validate_all(r: DatasetSample) -> bool:
             validate_outcries(r))
 
 
-training_validators = [
+training_validators: List[Callable[[DatasetSample], bool]] = [
     validate_sample_text_length,
     validate_sample_audio_length,
     validate_outcries,]
-conditioning_validators = [
+conditioning_validators: List[Callable[[DatasetSample], bool]] = [
     validate_outcries,
     validate_sample_conditioning_length,
 ]
 
-def all_validators(validators: List[Callable[[DatasetSample], bool]]) -> Callable[[DatasetSample], bool]:
+def compose_validators(validators: List[Callable[[DatasetSample], bool]]) -> Callable[[DatasetSample], bool]:
     def combined_validator(sample: DatasetSample) -> bool:
         return all(validator(sample) for validator in validators)
     return combined_validator
 
 def validate_dataset_records(samples: Iterable[DatasetSample], validators: List[Callable[[DatasetSample], bool]]) -> None:
     samples = list(samples)
-    combined = all_validators(validators)
+    combined = compose_validators(validators)
     
     for validator in validators + [combined]:
         valid_samples = list(map(validator, samples))

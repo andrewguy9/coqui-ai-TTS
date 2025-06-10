@@ -1,3 +1,7 @@
+from itertools import chain
+from typing import Callable, Generator, Iterable, Iterator, TypeVar
+
+
 def juxt(*fns):
     """
     Takes a set of functions and returns a fn that is the juxtaposition
@@ -19,3 +23,8 @@ def uniq(xs):
         if x not in seen:
             seen.add(x)
             yield x
+
+X = TypeVar("X")
+Y = TypeVar("Y")
+def flat_map(func: Callable[[X], Iterable[Y]], iterable: Iterable[X]) -> Iterator[Y]:
+  return chain.from_iterable(map(func, iterable))

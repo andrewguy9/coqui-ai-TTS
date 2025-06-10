@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Generator
 
 
-def walk_paths(path_str: str) -> Generator[Path, None, None]:
-    path = Path(path_str)
-    for p in path.rglob('*'):
-        yield p
+def walk_paths(path: Path) -> Generator[Path, None, None]:
+    path = Path(path)
+    for c in path.rglob('*'):
+        yield c
 
 def get_file_extension(path: Path):
     return path.suffix[1:] if path.suffix else ''
