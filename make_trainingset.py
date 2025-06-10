@@ -27,8 +27,8 @@ def trainingset_writer(metadata_path: Path, wav_dir: Path):
     def writer(data: List[DatasetSample]):
         with metadata_path.open('w', newline='') as csvfile:
             writer = csv.writer(csvfile, delimiter="|")
-            for row in data:
-                writer.writerow(row)
+            for wav, unnorm, norm in data:
+                writer.writerow([wav.stem, unnorm, norm])
     return writer
 
 def load_tag(path: Path) -> str:
