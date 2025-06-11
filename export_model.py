@@ -57,10 +57,10 @@ def main(args):
     dist_dir = Path(args['<dist_dir>'])
 
     model_names = args['<model_name>']
-    if not model_names:
+    if len(model_names) == 0:
         print(*find_models(run_dir), sep="\n")
+        return 0
     for model_name in model_names:
-        model_name = args['<model_name>']
         model_prefix = model_run_prefix(model_name)
 
         runs = find_runs(model_prefix, run_dir)
