@@ -7,6 +7,7 @@ import json
 from train_xtts import find_runs, model_run_prefix
 
 from TTS.tts.models.xtts import Xtts
+from TTS.config import load_config
 
 # find your latest checkpoint (adjust the glob as needed)
 def find_best_ckpt(run_dir):
@@ -39,11 +40,6 @@ def export_xtts_weights(run_dir: Path, output_dir: Path):
     # save pruned, inference-only checkpoint
     torch.save(checkpoint, ckpt_path_out)
     shutil.copy(config_path, config_path_out)
-
-def load_config(config_path: str) -> dict:
-    with open(config_path, "r") as f:
-        config = json.load(f)
-    return config
 
 def export_xtts_weights2(run_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(run_dir)
