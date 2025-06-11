@@ -4,7 +4,7 @@ from pathlib import Path
 import shutil
 import torch
 import json
-from train_xtts import find_runs
+from train_xtts import find_runs, model_run_prefix
 
 from TTS.tts.models.xtts import Xtts
 
@@ -58,9 +58,10 @@ def export_xtts_weights2(run_dir: Path, out_dir: Path):
 
 def main(args):
     model_name = args['<model_name>']
+    model_prefix = model_run_prefix(model_name)
 
     run_dir = Path(args['<rundir>'])
-    runs = find_runs(model_name, run_dir)
+    runs = find_runs(model_prefix, run_dir)
     if len(runs) == 0:
         raise FileNotFoundError(f"No runs found for model {model_name} in directory {run_dir}.")
     if len(runs) > 1:
