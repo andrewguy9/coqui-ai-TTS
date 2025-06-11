@@ -53,31 +53,36 @@ def export_xtts_weights2(run_dir: Path, out_dir: Path):
     shutil.copy(config_path, config_out_path)
 
 def main(args):
-    model_name = args['<model_name>']
-    model_prefix = model_run_prefix(model_name)
-
-    run_dir = Path(args['<rundir>'])
-    runs = find_runs(model_prefix, run_dir)
-    if len(runs) == 0:
-        raise FileNotFoundError(f"No runs found for model {model_name} in directory {run_dir}.")
-    if len(runs) > 1:
-        raise ValueError(f"Multiple runs found for model {model_name} in directory {run_dir}. Please specify a unique run.")
-    src_dir = runs[0]
-
+    run_dir = Path(args['<run_dir>'])
     dist_dir = Path(args['<dist_dir>'])
-    output_dir = dist_dir / model_name
-    output_dir.mkdir(parents=True, exist_ok=True)
-    if not output_dir.is_dir():
-        raise NotADirectoryError(f"Output directory {output_dir} does not exist or is not a directory.")
 
-    print(f"Exporting XTTS model from {src_dir} to {output_dir}")
-    export_xtts_weights2(src_dir, output_dir)
+    model_names = args['<model_name>']
+    if not model_names:
+        print(*run_dir.listdir(), sep="\n")
+    for model_name in model_names:
+        model_name = args['<model_name>']
+        model_prefix = model_run_prefix(model_name)
+
+        runs = find_runs(model_prefix, run_dir)
+        if len(runs) == 0:
+            raise FileNotFoundError(f"No runs found for model {model_name} in directory {run_dir}.")
+        if len(runs) > 1:
+            raise ValueError(f"Multiple runs found for model {model_name} in directory {run_dir}. Please specify a unique run.")
+        src_dir = runs[0]
+
+        output_dir = dist_dir / model_name
+        output_dir.mkdir(parents=True, exist_ok=True)
+        if not output_dir.is_dir():
+            raise NotADirectoryError(f"Output directory {output_dir} does not exist or is not a directory.")
+
+        print(f"Exporting XTTS model from {src_dir} to {output_dir}")
+        export_xtts_weights2(src_dir, output_dir)
 
 USAGE = """
 Export a trained XTTS model from rundir to a specified output directory.
 
 Usage:
-    export_model.py <rundir> <model_name> <dist_dir>
+    export_model.py <run_dir> <dist_dir> [<model_name>...]
 """
 
 if __name__ == "__main__":
