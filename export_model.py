@@ -45,7 +45,7 @@ def export_xtts_weights2(run_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(run_dir)
     config = load_config(config_path)
     model = Xtts.init_from_config(config)
-    model.load_checkpoint(config, checkpoint_path=best_path, map_location="cpu")
+    model.load_checkpoint(config, checkpoint_path=best_path)
     config_out_path = out_dir / "config.json"
     best_path_out = out_dir / "model.pth"
     out_dir.mkdir(parents=True, exist_ok=True)
