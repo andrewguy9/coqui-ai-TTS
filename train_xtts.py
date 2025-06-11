@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import re
 from typing import List
 
 from trainer import Trainer, TrainerArgs
@@ -22,6 +23,14 @@ def find_runs(run_name: str, run_dir: Path) -> List[Path]:
     print("GLOB PATTERN:", glob_pattern)
     runs = list(run_dir.glob(glob_pattern))
     return runs
+
+def find_models(run_dir: Path):
+    entries = run_dir.iterdir()
+    dirs = filter(lambda p: p.is_dir(), entries)
+    names = map(lambda p: p.name, dirs)
+    no_prefixes = map(lambda s: s.removeprefix("naqqal_"), names)
+    no_suffix = map(lambda s: re.sub(r"-.*$", "", s), no_prefixes)
+    yield from no_suffix
 
 def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
     # Define here the dataset that you want to use for the fine-tuning on.
