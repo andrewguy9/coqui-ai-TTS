@@ -85,3 +85,4 @@ Usage:
 
 if __name__ == "__main__":
     args = docopt(USAGE)
+    main(args)
