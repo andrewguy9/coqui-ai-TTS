@@ -58,7 +58,7 @@ def main(args):
 
     model_names = args['<model_name>']
     if not model_names:
-        print(*run_dir.listdir(), sep="\n")
+        print(*run_dir.iterdir(), sep="\n")
     for model_name in model_names:
         model_name = args['<model_name>']
         model_prefix = model_run_prefix(model_name)
