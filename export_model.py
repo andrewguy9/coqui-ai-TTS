@@ -78,7 +78,7 @@ def export_xtts_weights2(run_dir: Path, src_dir: Path, out_dir: Path):
         model = Xtts.init_from_config(config)
         model.load_checkpoint(config, checkpoint_path=best_path)
     except Exception:
-        raise RuntimeError(f"Failed to load model from {src_dir} and config {config_path}")
+        raise RuntimeError(f"Failed to load model from {src_dir} and config:\n{config_path.to_json()}")
     config_out_path = out_dir / "config.json"
     best_path_out = out_dir / "model.pth"
     out_dir.mkdir(parents=True, exist_ok=True)
