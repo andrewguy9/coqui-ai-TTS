@@ -26,7 +26,7 @@ def find_best_ckpt(run_dir):
 def copy_vocab_file(run_dir: Path, config: Coqpit, output_dir: Path):
     tokenizer_rel_path = config.get('tokenizer_file')
     if not tokenizer_rel_path:
-        raise ValueError("Tokenizer file path not found in the configuration.")
+        raise ValueError(f"Tokenizer file path not found in the configuration. {config.to_json()}")
     tokenizer_path = run_dir / tokenizer_rel_path
     if not tokenizer_path.is_file():
         raise FileNotFoundError(f"Tokenizer file {tokenizer_path} not found.")
