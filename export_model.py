@@ -1,3 +1,4 @@
+from coqpit import Coqpit
 from docopt import docopt
 import glob, os
 from pathlib import Path
@@ -22,6 +23,17 @@ def find_best_ckpt(run_dir):
     config_path = run_dir / Path(config[0])
     return config_path, best_path
 
+def copy_vocab_file(run_dir: Path, config: Coqpit, output_dir: Path):
+    tokenizer_rel_path = config.get('tokenizer_file')
+    if not tokenizer_rel_path:
+        raise ValueError("Tokenizer file path not found in the configuration.")
+    tokenizer_path = run_dir / tokenizer_rel_path
+    if not tokenizer_path.is_file():
+        raise FileNotFoundError(f"Tokenizer file {tokenizer_path} not found.")
+    output_vocab_path = output_dir / "vocab.json"
+    shutil.copy(tokenizer_path, output_vocab_path)
+    return output_vocab_path.relative_to(output_dir)
+
 def export_xtts_weights(run_dir: Path, output_dir: Path):
     config_path, ckpt_path = find_best_ckpt(run_dir)
     # load full checkpoint
@@ -41,9 +53,16 @@ def export_xtts_weights(run_dir: Path, output_dir: Path):
     torch.save(checkpoint, ckpt_path_out)
     shutil.copy(config_path, config_path_out)
 
+# TODO you need to copy vocab.json
+# TODO .test_sentences[0].speaker_wav has the reference_wav path full path.
+# TODO .model_args.tokenizer_file has relative path to the vocab.json file.
+# TODO .model_args.mel_norm_file has relative path to the origional xtts mel norm file.
+# TODO .model_args.dvae_checkpoint has relative path to the original xtts dvae checkpoint.
+# TODO .model_args.xtts_checkpoint has relative path to the original xtts checkpoint.
 def export_xtts_weights2(run_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(run_dir)
     config = load_config(config_path)
+    config['tokenizer_file'] = copy_vocab_file(run_dir, config, out_dir)
     model = Xtts.init_from_config(config)
     model.load_checkpoint(config, checkpoint_path=best_path)
     config_out_path = out_dir / "config.json"
