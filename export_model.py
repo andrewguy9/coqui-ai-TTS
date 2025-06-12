@@ -74,8 +74,11 @@ def export_xtts_weights2(run_dir: Path, src_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(src_dir)
     config = load_config(config_path)
     config['tokenizer_file'] = copy_vocab_file(run_dir, config, out_dir)
-    model = Xtts.init_from_config(config)
-    model.load_checkpoint(config, checkpoint_path=best_path)
+    try:
+        model = Xtts.init_from_config(config)
+        model.load_checkpoint(config, checkpoint_path=best_path)
+    except Exception:
+        raise RuntimeError(f"Failed to load model from {src_dir} and config {config_path}")
     config_out_path = out_dir / "config.json"
     best_path_out = out_dir / "model.pth"
     out_dir.mkdir(parents=True, exist_ok=True)
