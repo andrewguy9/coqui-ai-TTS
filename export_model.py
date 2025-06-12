@@ -59,8 +59,14 @@ def export_xtts_weights(run_dir: Path, output_dir: Path):
 # TODO .model_args.mel_norm_file has relative path to the origional xtts mel norm file.
 # TODO .model_args.dvae_checkpoint has relative path to the original xtts dvae checkpoint.
 # TODO .model_args.xtts_checkpoint has relative path to the original xtts checkpoint.
-def export_xtts_weights2(run_dir: Path, out_dir: Path):
-    config_path, best_path = find_best_ckpt(run_dir)
+def export_xtts_weights2(run_dir: Path, src_dir: Path, out_dir: Path):
+    """
+    run_dir is the directory containing all the training runs. This is needed to find config resources from the base XTTS files.
+    src_dir is the directory containing the XTTS training run.
+    out_dir is the directory where the exported model will be saved. It should be inside the dist directory by convention.
+
+    """
+    config_path, best_path = find_best_ckpt(src_dir)
     config = load_config(config_path)
     config['tokenizer_file'] = copy_vocab_file(run_dir, config, out_dir)
     model = Xtts.init_from_config(config)
