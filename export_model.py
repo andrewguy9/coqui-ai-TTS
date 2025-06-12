@@ -101,7 +101,7 @@ def main(args):
             raise NotADirectoryError(f"Output directory {output_dir} does not exist or is not a directory.")
 
         print(f"Exporting XTTS model from {src_dir} to {output_dir}")
-        export_xtts_weights2(src_dir, output_dir)
+        export_xtts_weights2(run_dir, src_dir, output_dir)
 
 USAGE = """
 Export a trained XTTS model from rundir to a specified output directory.
