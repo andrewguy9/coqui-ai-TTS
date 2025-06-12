@@ -24,9 +24,14 @@ def find_best_ckpt(run_dir):
     return config_path, best_path
 
 def copy_vocab_file(run_dir: Path, config: Coqpit, output_dir: Path):
-    tokenizer_rel_path = config.get("model_args").get("tokenizer_file")
-    if not tokenizer_rel_path:
+    # Note: The trainer puts run/training at the start of the path,
+    # so we need to remove that part to get the correct relative path.
+    tokenizer_config_path = config.get("model_args").get("tokenizer_file")
+    if not tokenizer_config_path:
         raise ValueError(f"Tokenizer file path not found in the configuration. {config.to_json()}")
+    if not tokenizer_config_path.startswith("run/training/"):
+        raise ValueError(f"Tokenizer file path {tokenizer_config_path} does not start with 'run/training/'.")
+    tokenizer_rel_path = Path(tokenizer_config_path).relative_to("run/training")
     tokenizer_path = run_dir / tokenizer_rel_path
     if not tokenizer_path.is_file():
         raise FileNotFoundError(f"Tokenizer file {tokenizer_path} not found.")
