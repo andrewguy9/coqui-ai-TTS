@@ -73,7 +73,7 @@ def export_xtts_weights2(run_dir: Path, src_dir: Path, out_dir: Path):
     """
     config_path, best_path = find_best_ckpt(src_dir)
     config = load_config(config_path)
-    config['tokenizer_file'] = copy_vocab_file(run_dir, config, out_dir)
+    config['model_args']['tokenizer_file'] = copy_vocab_file(run_dir, config, out_dir)
     try:
         model = Xtts.init_from_config(config)
         model.load_checkpoint(config, checkpoint_path=best_path)
