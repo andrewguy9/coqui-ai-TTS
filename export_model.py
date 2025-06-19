@@ -29,7 +29,7 @@ def find_tokenizer_file(config: Coqpit) -> Path:
     so we need to remove that part to get the correct relative path.
     """
     model_args = config.get("model_args")
-    vocab_path = Path(config.get('tokenizer_file'))
+    vocab_path = Path(model_args.get('tokenizer_file'))
     if not vocab_path.is_file():
         raise FileNotFoundError(f"Tokenizer file {vocab_path} not found")
     if not vocab_path.is_absolute():
