@@ -83,7 +83,7 @@ def export_xtts_weights_minified(config, weights_path: Path, out_dir: Path):
     vocab_path = find_tokenizer_file(config)
     try:
         model = Xtts.init_from_config(config)
-        model.load_checkpoint(config, checkpoint_path=weights_path, vocab_path=vocab_path)
+        model.load_checkpoint(config, checkpoint_path=weights_path, vocab_path=str(vocab_path))
     except Exception:
         raise RuntimeError(f"Failed to load model from {weights_path} and config:\n{config.to_json()}")
     new_weights_path = out_dir / "model.pth"
