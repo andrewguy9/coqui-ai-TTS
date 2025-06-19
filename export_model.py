@@ -36,10 +36,10 @@ def find_tokenizer_file(config: Coqpit) -> Path:
         raise ValueError(f"Tokenizer file {vocab_path} must be an absolute path.")
     return vocab_path
 
-def copy_vocab_file(old_vocab_path: Path, output_dir: Path = None):
+def copy_vocab_file(old_vocab_path: Path, output_dir: Path):
     output_vocab_path = output_dir / "vocab.json"
     shutil.copy(old_vocab_path, output_vocab_path)
-    return output_vocab_path.relative_to(output_dir)
+    return output_vocab_path
 
 def export_xtts_weights(run_dir: Path, output_dir: Path):
     config_path, ckpt_path = find_best_ckpt(run_dir)
@@ -90,7 +90,9 @@ def export_xtts_weights_minified(config, weights_path: Path, vocab_path: Path, o
     return new_weights_path
 
 def export_xtts_model_config(config, new_vocab_path: Path, new_weights_path: Path, out_dir: Path):
+    # TODO update relative paths in the config
     config['model_args']['tokenizer_file'] = new_vocab_path
+    # TODO update relative paths in the config
     config['model_args']['xtts_checkpoint'] = new_weights_path
     config_out_path = out_dir / "config.json"
     json_config = config.to_json()
