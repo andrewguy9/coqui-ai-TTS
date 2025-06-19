@@ -90,6 +90,40 @@ def export_xtts_weights_minified(config, weights_path: Path, out_dir: Path):
     torch.save(model.state_dict(), new_weights_path)
     return new_weights_path
 
+from pathlib import Path
+import torch
+from TTS.tts.models.xtts import Xtts  # or wherever you import Xtts from
+
+def export_xtts_weights_minified2(config, weights_path: Path, out_dir: Path):
+    """
+    Strip the unused DVAE blocks but keep a valid checkpoint layout for XTTS inference.
+    """
+    vocab_path = find_tokenizer_file(config)
+
+    # 1. Load the full checkpoint.
+    model = Xtts.init_from_config(config)
+    model.load_checkpoint(
+        config,
+        checkpoint_path=str(weights_path),
+        vocab_path=str(vocab_path),
+        # keep_dvae=False   # if the loader supports dropping DVAE already
+    )
+
+    # 2. Build a minimal but _compatible_ checkpoint.
+    ckpt = {
+        "model": model.state_dict(),          # mandatory
+        "mel_stats": getattr(model, "mel_stats", None),  # optional but handy
+        "config": config.to_dict(),           # optional – nice for debugging
+        # add other keys if the runtime code expects them
+        # "step": 0,
+        # "optimizer": None,
+    }
+
+    # 3. Save it.
+    new_weights_path = out_dir / "model.pth"
+    torch.save(ckpt, new_weights_path)
+    return new_weights_path
+
 def export_xtts_model_config(config, new_vocab_path: Path, new_weights_path: Path, out_dir: Path):
     # TODO update relative paths in the config
     config['model_args']['tokenizer_file'] = new_vocab_path
@@ -115,7 +149,7 @@ def export_xtts_finetune(run_dir: Path, src_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(src_dir)
     config = load_config(config_path)
     new_vocab_path = export_xtts_tokenizer(run_dir, config, out_dir)
-    new_best_path = export_xtts_weights_minified(config, best_path, out_dir)
+    new_best_path = export_xtts_weights_minified2(config, best_path, out_dir)
     export_xtts_model_config(config, new_vocab_path, new_best_path, out_dir)
 
 def main(args):
