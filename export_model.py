@@ -100,7 +100,7 @@ def export_xtts_model_config(config, new_vocab_path: Path, new_weights_path: Pat
     print(f"New model config at {config_out_path}")
     print(json_config)
     with open(config_out_path, 'w') as f:
-        json.dump(config.to_json(), f, indent=4)
+        f.write(json_config)
     return config_out_path
 
 def export_xtts_finetune(run_dir: Path, src_dir: Path, out_dir: Path):
