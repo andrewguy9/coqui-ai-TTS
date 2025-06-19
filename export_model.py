@@ -23,20 +23,22 @@ def find_best_ckpt(run_dir):
     config_path = run_dir / Path(config[0])
     return config_path, best_path
 
-def copy_vocab_file(run_dir: Path, config: Coqpit, output_dir: Path):
-    # Note: The trainer puts run/training at the start of the path,
-    # so we need to remove that part to get the correct relative path.
-    tokenizer_config_path = config.get("model_args").get("tokenizer_file")
-    if not tokenizer_config_path:
-        raise ValueError(f"Tokenizer file path not found in the configuration. {config.to_json()}")
-    if not tokenizer_config_path.startswith("run/training/"):
-        raise ValueError(f"Tokenizer file path {tokenizer_config_path} does not start with 'run/training/'.")
-    tokenizer_rel_path = Path(tokenizer_config_path).relative_to("run/training")
-    tokenizer_path = run_dir / tokenizer_rel_path
-    if not tokenizer_path.is_file():
-        raise FileNotFoundError(f"Tokenizer file {tokenizer_path} not found.")
+def find_tokenizer_file(config: Coqpit) -> Path:
+    """
+    Note: The trainer puts run/training at the start of the path,
+    so we need to remove that part to get the correct relative path.
+    """
+    model_args = config.get("model_args")
+    vocab_path = Path(config.get('tokenizer_file'))
+    if not vocab_path.is_file():
+        raise FileNotFoundError(f"Tokenizer file {vocab_path} not found")
+    if not vocab_path.is_absolute():
+        raise ValueError(f"Tokenizer file {vocab_path} must be an absolute path.")
+    return vocab_path
+
+def copy_vocab_file(old_vocab_path: Path, output_dir: Path = None):
     output_vocab_path = output_dir / "vocab.json"
-    shutil.copy(tokenizer_path, output_vocab_path)
+    shutil.copy(old_vocab_path, output_vocab_path)
     return output_vocab_path.relative_to(output_dir)
 
 def export_xtts_weights(run_dir: Path, output_dir: Path):
@@ -64,27 +66,54 @@ def export_xtts_weights(run_dir: Path, output_dir: Path):
 # TODO .model_args.mel_norm_file has relative path to the origional xtts mel norm file.
 # TODO .model_args.dvae_checkpoint has relative path to the original xtts dvae checkpoint.
 # TODO .model_args.xtts_checkpoint has relative path to the original xtts checkpoint.
-def export_xtts_weights2(run_dir: Path, src_dir: Path, out_dir: Path):
+def export_xtts_tokenizer(run_dir: Path, config, out_dir: Path):
     """
-    run_dir is the directory containing all the training runs. This is needed to find config resources from the base XTTS files.
-    src_dir is the directory containing the XTTS training run.
-    out_dir is the directory where the exported model will be saved. It should be inside the dist directory by convention.
+    Rundir is the directory containing all the training runs.
+    This is needed to find the XTTS tokenizer file.
+    """
+    # TODO 
+    old_vocab_path = find_tokenizer_file(config)
+    if not old_vocab_path.is_file():
+        raise FileNotFoundError(f"Tokenizer file {old_vocab_path} not found in run directory {run_dir}.")
+    new_vocab_path = copy_vocab_file(old_vocab_path, out_dir)
+    print(f"Copied tokenizer file from: {old_vocab_path} to {new_vocab_path}")
+    return new_vocab_path
 
-    """
-    config_path, best_path = find_best_ckpt(src_dir)
-    config = load_config(config_path)
-    new_vocab_path = copy_vocab_file(run_dir, config, out_dir)
+def export_xtts_weights_minified(config, weights_path: Path, vocab_path: Path, out_dir: Path):
     try:
         model = Xtts.init_from_config(config)
-        model.load_checkpoint(config)
+        model.load_checkpoint(config, checkpoint_path=weights_path, vocab_path=vocab_path)
     except Exception:
-        raise RuntimeError(f"Failed to load model from {src_dir} and config:\n{config.to_json()}")
+        raise RuntimeError(f"Failed to load model from {weights_path} and config:\n{config.to_json()}")
+    new_weights_path = out_dir / "model.pth"
+    torch.save(model.state_dict(), new_weights_path)
+    return new_weights_path
+
+def export_xtts_model_config(config, new_vocab_path: Path, new_weights_path: Path, out_dir: Path):
     config['model_args']['tokenizer_file'] = new_vocab_path
+    config['model_args']['xtts_checkpoint'] = new_weights_path
     config_out_path = out_dir / "config.json"
-    best_path_out = out_dir / "model.pth"
+    json_config = config.to_json()
+    print(f"New model config at {config_out_path}")
+    print(json_config)
+    with open(config_out_path, 'w') as f:
+        json.dump(config.to_json(), f, indent=4)
+    return config_out_path
+
+def export_xtts_finetune(run_dir: Path, src_dir: Path, out_dir: Path):
+    """
+    run_dir is the directory containing all the training runs.
+    This is needed to find config resources from the base XTTS files.
+    src_dir is the directory containing the XTTS training run.
+    out_dir is the directory where the exported model will be saved.
+    It should be inside the dist directory by convention.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
-    torch.save(model.state_dict(), best_path_out)
-    shutil.copy(config_path, config_out_path)
+    config_path, best_path = find_best_ckpt(src_dir)
+    config = load_config(config_path)
+    new_vocab_path = export_xtts_tokenizer(run_dir, config, out_dir)
+    new_best_path = export_xtts_weights_minified(config, best_path, new_vocab_path, out_dir)
+    export_xtts_model_config(config, new_vocab_path, new_best_path, out_dir)
 
 def main(args):
     run_dir = Path(args['<run_dir>'])
@@ -110,7 +139,7 @@ def main(args):
             raise NotADirectoryError(f"Output directory {output_dir} does not exist or is not a directory.")
 
         print(f"Exporting XTTS model from {src_dir} to {output_dir}")
-        export_xtts_weights2(run_dir, src_dir, output_dir)
+        export_xtts_finetune(run_dir, src_dir, output_dir)
 
 USAGE = """
 Export a trained XTTS model from rundir to a specified output directory.
