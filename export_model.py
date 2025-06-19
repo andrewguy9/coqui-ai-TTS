@@ -79,7 +79,8 @@ def export_xtts_tokenizer(run_dir: Path, config, out_dir: Path):
     print(f"Copied tokenizer file from: {old_vocab_path} to {new_vocab_path}")
     return new_vocab_path
 
-def export_xtts_weights_minified(config, weights_path: Path, vocab_path: Path, out_dir: Path):
+def export_xtts_weights_minified(config, weights_path: Path, out_dir: Path):
+    vocab_path = find_tokenizer_file(config)
     try:
         model = Xtts.init_from_config(config)
         model.load_checkpoint(config, checkpoint_path=weights_path, vocab_path=vocab_path)
@@ -114,7 +115,7 @@ def export_xtts_finetune(run_dir: Path, src_dir: Path, out_dir: Path):
     config_path, best_path = find_best_ckpt(src_dir)
     config = load_config(config_path)
     new_vocab_path = export_xtts_tokenizer(run_dir, config, out_dir)
-    new_best_path = export_xtts_weights_minified(config, best_path, new_vocab_path, out_dir)
+    new_best_path = export_xtts_weights_minified(config, best_path, out_dir)
     export_xtts_model_config(config, new_vocab_path, new_best_path, out_dir)
 
 def main(args):
