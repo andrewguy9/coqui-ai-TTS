@@ -15,11 +15,27 @@ def load_and_preprocess(wav_path: str, target_sr: int = 16000) -> torch.Tensor:
         wav = wav.mean(dim=0)
     return wav.unsqueeze(0)                  # [1, time]
 
+import warnings
+import logging
+
 def get_emotion_classifier():
-    # Load model once
+    RENAME = {
+    "neu": "neutral",
+    "hap": "happy",
+    "sad": "sad",
+    "ang": "angry",
+    }
+    warnings.filterwarnings(
+        "ignore",
+        category=UserWarning,
+        message=r"^Passing `gradient_checkpointing` to a config initialization is deprecated and will be removed in v5.*")
+    lg = logging.getLogger(
+        "speechbrain.lobes.models.huggingface_transformers.huggingface")
+    lg.disabled = True
+
     classifier = EncoderClassifier.from_hparams(
         source="speechbrain/emotion-recognition-wav2vec2-IEMOCAP",
-        savedir="tmp/emotion" # TODO remove?
+        savedir="tmp/emotion", # TODO remove?
     )
     classifier.hparams.label_encoder.expect_len(4)
 
@@ -42,7 +58,7 @@ def get_emotion_classifier():
         pred_idx = torch.argmax(probs, dim=-1)
         label = classifier.hparams.label_encoder.decode_ndim(pred_idx)
         confidence = probs[pred_idx].item()
-        return label, confidence
+        return RENAME[label], confidence
     
     return classify_file
 
