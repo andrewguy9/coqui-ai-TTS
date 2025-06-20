@@ -18,14 +18,6 @@ def persist_label(path: Path, text: str):
         f.write(text)
         return path
 
-
-def log_wrapper(fn):
-    def inner(*args, **kwargs):
-        result = fn(*args, **kwargs)
-        print(f"Function {fn.__name__} called with args: {args}, kwargs: {kwargs}, returned: {result}")
-        return result
-    return inner
-
 def label_under_path(label_fn, src: Path):
     file_paths = walk_paths(src)
     audio_files = filter(is_audio, file_paths)
