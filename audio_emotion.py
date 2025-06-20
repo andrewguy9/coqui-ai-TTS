@@ -21,6 +21,7 @@ def get_emotion_classifier():
         source="speechbrain/emotion-recognition-wav2vec2-IEMOCAP",
         savedir="tmp/emotion" # TODO remove?
     )
+    classifier.hparams.label_encoder.expect_len(4)
 
     # TODO classify_file should take the waveform, and we can have a helper to load it/normalize it.
     def classify_file(wav_path: str):
