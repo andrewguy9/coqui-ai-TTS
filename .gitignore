@@ -173,3 +173,7 @@ depot/*
 coqui_recipes/*
 local_scripts/*
 coqui_demos/*
+
+# Data/Trainig sets.
+datasets/
+trainingset/
