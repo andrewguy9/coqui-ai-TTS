@@ -2,7 +2,7 @@ import json
 from docopt import docopt
 from functional_tools import juxt
 from pathlib import Path
-from typing import Generator
+from typing import Generator, get_args
 import whisper
 from path_utils import walk_paths, is_audio, is_normal_file, make_extension_replacer
 from audio_emotion import Emotion, emotion_scores_from_wav
@@ -38,6 +38,7 @@ def persist_emote(path: Path, scores: dict[Emotion, float]):
     with open(emote_path(path), "w") as f:
         json_str = json.dumps(scores, indent=4)
         f.write(json_str)
+    return path
 
 def emote_under_path(src: Path):
     existing_audio_files = audio_under_path(src)

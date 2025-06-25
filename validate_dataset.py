@@ -1,11 +1,11 @@
-from typing import Callable, Iterable, Iterator, List, Tuple
+from typing import Callable, Iterable, Iterator, List, Tuple, Dict, get_args
+from audio_emotion import Emotion
 from docopt import docopt
-from functional_tools import identity, juxt, uniq
 from pathlib import Path
 
 import csv
 
-DatasetSample = Tuple[Path, str, str]  # (auto_file_stem, unnormalized text, normalized_text)
+DatasetSample = Tuple[Path, str, str, Dict[Emotion, float]]  # (auto_file_stem, unnormalized text, normalized_text)
 def dataset_reader(dataset_path: Path) -> Iterator[DatasetSample]:
     metadata_path = dataset_path / "metadata.csv"
     wav_dir = dataset_path / "wavs"
@@ -16,29 +16,30 @@ def dataset_reader(dataset_path: Path) -> Iterator[DatasetSample]:
     with metadata_path.open('r', newline='') as csvfile:
         reader = csv.reader(csvfile, delimiter="|")
         for row in reader:
-            yield wav_dir / f"{row[0]}.wav", row[1], row[2]
+            emotions = {e: float(v) for e, v in zip(get_args(Emotion), row[3:])}
+            yield wav_dir / f"{row[0]}.wav", row[1], row[2], emotions
 
 def validate_sample_text_length(r: DatasetSample) -> bool:
-    _, text, normalized = r
+    _, text, normalized, _ = r
     return len(text) < 250 and len(normalized) < 250
 
 from torchaudio import info
 
 def get_audio_length(r: DatasetSample) -> float:
-    audio_path, _, _ = r
+    audio_path, _, _, _ = r
     metadata = info(audio_path)
     return metadata.num_frames / metadata.sample_rate
 
 def validate_sample_audio_length(r: DatasetSample) -> bool:
     max_audio_length = 11.6  # seconds
-    audio_path, _, _ = r
+    audio_path, _, _, _ = r
     seconds = get_audio_length(r)
     return seconds <= max_audio_length
 
 def validate_sample_conditioning_length(r: DatasetSample) -> bool:
     min_conditioning_length = 3  # seconds
     max_conditioning_length = 6  # seconds
-    audio_path, _, _ = r
+    audio_path, _, _, _ = r
     seconds = get_audio_length(r)
     return min_conditioning_length <= seconds <= max_conditioning_length
 
@@ -63,7 +64,7 @@ def find_outcries(text):
     return screams
 
 def validate_outcries(r: DatasetSample) -> bool:
-    _, text, _ = r
+    _, text, _, _ = r
     screams = find_outcries(text)
     return len(screams) == 0
 
