@@ -5,7 +5,7 @@ from pathlib import Path
 
 import csv
 
-DatasetSample = Tuple[Path, str, str, Dict[Emotion, float]]  # (auto_file_stem, unnormalized text, normalized_text)
+DatasetSample = Tuple[Path, str, str, float, Dict[Emotion, float]]  # (auto_file_stem, unnormalized text, normalized_text)
 def dataset_reader(dataset_path: Path) -> Iterator[DatasetSample]:
     metadata_path = dataset_path / "metadata.csv"
     wav_dir = dataset_path / "wavs"
@@ -17,31 +17,35 @@ def dataset_reader(dataset_path: Path) -> Iterator[DatasetSample]:
         reader = csv.reader(csvfile, delimiter="|")
         for row in reader:
             emotions = {e: float(v) for e, v in zip(get_args(Emotion), row[3:])}
-            yield wav_dir / f"{row[0]}.wav", row[1], row[2], emotions
+            sample_path = wav_dir / f"{row[0]}.wav"
+            duration = get_audio_duration(sample_path)
+            yield sample_path, row[1], row[2], duration, emotions
 
 def validate_sample_text_length(r: DatasetSample) -> bool:
-    _, text, normalized, _ = r
+    _, text, normalized, _, _ = r
     return len(text) < 250 and len(normalized) < 250
 
-from torchaudio import info
+from torchaudio import info as audio_info
 
-def get_audio_length(r: DatasetSample) -> float:
-    audio_path, _, _, _ = r
-    metadata = info(audio_path)
+def get_audio_duration(audio_path: Path) -> float:
+    metadata = audio_info(audio_path)
     return metadata.num_frames / metadata.sample_rate
+
+# TODO remove, once sample duration is part of the DatasetSample record.
+def get_sample_length(r: DatasetSample) -> float:
+    _, _, _, duration, _ = r
+    return duration
 
 def validate_sample_audio_length(r: DatasetSample) -> bool:
     max_audio_length = 11.6  # seconds
-    audio_path, _, _, _ = r
-    seconds = get_audio_length(r)
-    return seconds <= max_audio_length
+    _, _, _, duration, _ = r
+    return duration <= max_audio_length
 
 def validate_sample_conditioning_length(r: DatasetSample) -> bool:
     min_conditioning_length = 3  # seconds
     max_conditioning_length = 6  # seconds
-    audio_path, _, _, _ = r
-    seconds = get_audio_length(r)
-    return min_conditioning_length <= seconds <= max_conditioning_length
+    _, _, _, duration, _ = r
+    return min_conditioning_length <= duration <= max_conditioning_length
 
 import spacy
 from spacy.matcher import Matcher
@@ -64,7 +68,7 @@ def find_outcries(text):
     return screams
 
 def validate_outcries(r: DatasetSample) -> bool:
-    _, text, _, _ = r
+    _, text, _, _, _ = r
     screams = find_outcries(text)
     return len(screams) == 0
 
@@ -84,6 +88,7 @@ conditioning_validators: List[Callable[[DatasetSample], bool]] = [
     validate_sample_conditioning_length,
 ]
 
+# TODO every-pred
 def compose_validators(validators: List[Callable[[DatasetSample], bool]]) -> Callable[[DatasetSample], bool]:
     def combined_validator(sample: DatasetSample) -> bool:
         return all(validator(sample) for validator in validators)
