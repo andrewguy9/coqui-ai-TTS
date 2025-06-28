@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import signal
 import sys
-from typing import Literal, Dict
+from typing import Literal, Dict, List
 import torch
 import torchaudio
 from speechbrain.inference.classifiers import EncoderClassifier
@@ -18,6 +18,12 @@ RENAME: Dict[Tag, Emotion] = {
 "hap": "happy",
 "sad": "sad",
 "ang": "angry",
+}
+EmotionFallbacks: Dict[Emotion, List[Emotion]] = {
+    "neutral": ["happy", "sad", "angry"],
+    "happy": ["neutral", "sad", "angry"],
+    "sad": ["neutral", "happy", "angry"],
+    "angry": ["neutral", "happy", "sad"],
 }
 
 

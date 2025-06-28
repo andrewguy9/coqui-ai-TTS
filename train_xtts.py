@@ -12,6 +12,7 @@ from TTS.tts.models.xtts import XttsAudioConfig
 from TTS.utils.manage import ModelManager
 from docopt import docopt
 
+from make_trainingset import conditingset_reader
 from path_utils import get_base_name, is_audio, walk_paths
 
 def model_run_prefix(dataset_name: str) -> str:
@@ -191,19 +192,30 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
 
     # Training sentences generations
     # TODO is this the best reference?
-    SPEAKER_REFERENCE = train_samples[0]['audio_file']
-    print("SPEAKER_REFERENCE:", SPEAKER_REFERENCE, sep="\n")
+    # TODO would nice nice to just use the training_dir without knowing the reference sub path.
+    SPEAKER_REFERENCES = conditingset_reader(training_dir / "references")
+    print("SPEAKER_REFERENCES:", *SPEAKER_REFERENCES.items(), sep="\n")
     LANGUAGE = config_dataset.language
 
     config.test_sentences = [
             {
                 "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES["neutral"],
                 "language": LANGUAGE,
             },
             {
                 "text": "This cake is great. It's so delicious and moist.",
-                "speaker_wav": SPEAKER_REFERENCE,
+                "speaker_wav": SPEAKER_REFERENCES['happy'],
+                "language": LANGUAGE,
+            },
+            {
+                "text": "I am not angry, I am just disappointed.",
+                "speaker_wav": SPEAKER_REFERENCES['sad'],
+                "language": LANGUAGE,
+            },
+            {
+                "text": "I'm so angry right now, I can't even think straight.",
+                "speaker_wav": SPEAKER_REFERENCES['angry'],
                 "language": LANGUAGE,
             },
         ]

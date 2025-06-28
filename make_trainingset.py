@@ -1,6 +1,7 @@
 import json
 from typing import Dict, Iterator, List, Tuple, get_args
 from docopt import docopt
+from audio_emotion import EmotionFallbacks
 from functional_tools import flat_map, identity, juxt, uniq
 from label_audio import Emotion
 from path_utils import is_audio, walk_paths, is_normal_file, make_extension_replacer
@@ -65,6 +66,26 @@ def conditioningset_writer(references_dir: Path):
             print(f"Copying {wav_path} to {dst_path}")
             copyfile(wav_path, dst_path)
     return writer
+
+def find_conditioning_sample(references_dir: Path, emotion: Emotion) -> Path:
+    path = references_dir / f"{emotion}.wav"
+    if path.exists():
+        return path
+    for fallback in EmotionFallbacks[emotion]:
+        fallback_path = references_dir / f"{fallback}.wav"
+        if fallback_path.exists():
+            return fallback_path
+    raise FileNotFoundError(f"No conditioning sample found for emotion {emotion} in {references_dir}.")
+
+def conditingset_reader(references_dir: Path) -> Dict[Emotion, Path]:
+    """
+    Reads the conditioning set from the references directory.
+    Returns a dictionary mapping emotions to their corresponding wav file paths.
+    """
+    conditioning_samples: Dict[Emotion, Path] = {}
+    for emotion in get_args(Emotion):
+        path = find_conditioning_sample(references_dir, emotion)
+    return conditioning_samples
 
 def load_tag(path: Path) -> str:
   return path.read_text().strip()
