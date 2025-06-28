@@ -50,22 +50,112 @@ def validate_sample_conditioning_length(r: DatasetSample) -> bool:
 import spacy
 from spacy.matcher import Matcher
 
-nlp = spacy.load("en_core_web_sm")
-matcher = Matcher(nlp.vocab)
-
 # Pattern: any token containing a run of the same letter 4+ times
-matcher.add(
-    "OUTCRY",
-    [
-        [{"TEXT": {"REGEX": r"([A-Za-z!?.])\1{3,}"}}]
-    ]
-)
+"""
+WOOHOOHOO
+AWWWWWW
+Ha!
+Whoop!
+Wah!
+Waha!
+HUAH!
+HOOP
+DENIED!
+POING
+Hehehe
+BOOOOOO!
+Ha ha!
+Ho ho ho!
+Ho ho ho! Ho ho ho! You got owned!
+HAHAHA
+HA HA HA HA HA HA HA HA HA
+Ha!
+AHHHHHHHHHH
+AHHHHH
+UGH!
+Argh!
+AH!
+Oof!
+PFFT
+WOOO!
+BWAH!
+
+few words
+lots of all caps
+"""
+
+nlp = spacy.load("en_core_web_sm")
+outcry_matcher = Matcher(nlp.vocab)
+
+outcry_matcher.add("SCREAMING", [[{"TEXT": {"REGEX": r"([A-Za-z])\1{3,}"}}, {"ORTH": "!", "OP": "?"}]])
+outcry_matcher.add("LAUGHING",  [[{"TEXT": {"REGEX": r"([Hh][Aa])+"}}, {"ORTH": "!", "OP": "?"}],
+                                 [{"TEXT": {"REGEX": r"([Hh][Ee])+"}}, {"ORTH": "!", "OP": "?"}],
+                                 [{"TEXT": {"REGEX": r"([Hh][Oo])+"}}, {"ORTH": "!", "OP": "?"}]])
+outcry_matcher.add("YELLING",   [[{"TEXT": {"REGEX": r"WO{2,}"}}, {"ORTH": "!"}],
+                                 [{"TEXT": {"REGEX": r"[A-Z]{4,}"}}, {"ORTH": "!", "OP": "?"}]])
+outcry_matcher.add("BOOING",    [[{"TEXT": {"REGEX": r"BO{2,}"}}, {"ORTH": "!"}]])
+outcry_matcher.add("GASPING",   [[{"TEXT": "Wah"}, {"ORTH": "!", "OP": "?"}],
+                                 [{"TEXT": "AH"}, {"ORTH": "!", "OP": "?"}]])
+outcry_matcher.add("CHEERING",  [[{"TEXT": {"REGEX": r"Whoop"}}]])
+outcry_matcher.add("GRUNTING", [[{"TEXT": "HUAH"}, {"ORTH": "!", "OP": "?"}],
+                                [{"TEXT": "UGH"}, {"ORTH": "!", "OP": "?"}],
+                                [{"TEXT": "Argh"}, {"ORTH": "!", "OP": "?"}],
+                                [{"TEXT": "Oof"}, {"ORTH": "!", "OP": "?"}],
+                                ])
+outcry_matcher.add("SPUTTERING",[[{"TEXT": "PFFT"}],
+                                 [{"TEXT": "BWAH"}, {"ORTH": "!", "OP": "?"}]])
 
 def find_outcries(text):
     doc = nlp(text)
-    matches = matcher(doc)
-    screams = [doc[start:end].text for _, start, end in matches]
-    return screams
+    matches = outcry_matcher(doc)
+    outcries = [doc[start:end].text for _, start, end in matches]
+    return outcries
+
+def test_find_outcries():
+    emotive_cases = \
+    """
+    WOOHOOHOO
+    AWWWWWW
+    Haha
+    Ha!
+    Whoop!
+    Wah!
+    Waha!
+    HUAH!
+    HOOP
+    Haha!
+    Hehehe
+    BOOOOOO!
+    Ha ha!
+    Ho ho ho!
+    Ho ho ho! Ho ho ho! You got owned!
+    HAHAHA
+    HA HA HA HA HA HA HA HA HA
+    Ha!
+    AHHHHHHHHHH
+    AHHHHH
+    UGH!
+    Argh!
+    AH!
+    Oof!
+    PFFT
+    WOOO!
+    BWAH!
+    """.strip().splitlines(keepends=False)
+    yelling_word_cases = \
+    """
+    DENIED!
+    POING
+    """.strip().splitlines(keepends=False)
+    pos_cases = emotive_cases + yelling_word_cases
+    for s in pos_cases:
+        s = s.strip()
+        # print("testing:", s)
+        outcries = find_outcries(s)
+        assert len(outcries) > 0, s
+        # print("\tfound outcries:", outcries)
+
+test_find_outcries()
 
 def validate_outcries(r: DatasetSample) -> bool:
     _, text, _, _, _ = r
