@@ -193,7 +193,7 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     # Training sentences generations
     # TODO is this the best reference?
     # TODO would nice nice to just use the training_dir without knowing the reference sub path.
-    SPEAKER_REFERENCES = conditingset_reader(training_dir / "references")
+    SPEAKER_REFERENCES = conditingset_reader(Path(config_dataset.path) / "references")
     print("SPEAKER_REFERENCES:", *SPEAKER_REFERENCES.items(), sep="\n")
     LANGUAGE = config_dataset.language
 
