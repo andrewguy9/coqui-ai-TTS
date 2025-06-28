@@ -159,8 +159,8 @@ test_find_outcries()
 
 def validate_outcries(r: DatasetSample) -> bool:
     _, text, _, _, _ = r
-    screams = find_outcries(text)
-    return len(screams) == 0
+    outcries = find_outcries(text)
+    return len(outcries) == 0
 
 def validate_all(r: DatasetSample) -> bool:
     return (validate_sample_text_length(r) and
