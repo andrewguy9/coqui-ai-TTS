@@ -200,22 +200,22 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     config.test_sentences = [
             {
                 "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
-                "speaker_wav": SPEAKER_REFERENCES["neutral"],
+                "speaker_wav": str(SPEAKER_REFERENCES["neutral"]),
                 "language": LANGUAGE,
             },
             {
                 "text": "This cake is great. It's so delicious and moist.",
-                "speaker_wav": SPEAKER_REFERENCES['happy'],
+                "speaker_wav": str(SPEAKER_REFERENCES['happy']),
                 "language": LANGUAGE,
             },
             {
                 "text": "I am not angry, I am just disappointed.",
-                "speaker_wav": SPEAKER_REFERENCES['sad'],
+                "speaker_wav": str(SPEAKER_REFERENCES['sad']),
                 "language": LANGUAGE,
             },
             {
                 "text": "I'm so angry right now, I can't even think straight.",
-                "speaker_wav": SPEAKER_REFERENCES['angry'],
+                "speaker_wav": str(SPEAKER_REFERENCES['angry']),
                 "language": LANGUAGE,
             },
         ]
