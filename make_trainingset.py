@@ -85,6 +85,7 @@ def conditingset_reader(references_dir: Path) -> Dict[Emotion, Path]:
     conditioning_samples: Dict[Emotion, Path] = {}
     for emotion in get_args(Emotion):
         path = find_conditioning_sample(references_dir, emotion)
+        conditioning_samples[emotion] = path
     return conditioning_samples
 
 def load_tag(path: Path) -> str:
