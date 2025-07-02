@@ -80,7 +80,7 @@ def make_reference_wav(dst_path: Path, samples: List[DatasetSample]):
     # Each wav is a tuple: (tensor, sample_rate)
     tensors = [wav[0] for wav in wavs]
     sample_rate = wavs[0][1]
-    combined = cat(tensors) # TODO we may need to handle different sample rates, or different channels
+    combined = cat(tensors, dim=-1)  # Concatenate along the time dimension # TODO sample rate channel differnces?
     save(dst_path, combined, sample_rate)
 
 
