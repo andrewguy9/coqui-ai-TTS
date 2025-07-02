@@ -120,7 +120,7 @@ def conditioningset_writer(references_dir: Path):
             # Pack samples into a single reference wav
             packed_samples = pack_reference_samples(6.0, group_samples)
             dst_path = references_dir / f"{emotion}.wav"
-            print(f"Creating reference for {emotion} at {dst_path}")
+            print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
             make_reference_wav(dst_path, packed_samples)
     return writer2
 
