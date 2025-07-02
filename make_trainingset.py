@@ -11,7 +11,7 @@ from pathlib import Path
 import csv
 
 from shutil import copyfile
-from validate_dataset import get_audio_duration, training_validators, conditioning_validators, compose_validators, get_sample_length, DatasetSample
+from validate_dataset import get_audio_duration, is_valid_conditioning_length, training_validators, conditioning_validators, compose_validators, get_sample_length, DatasetSample
 
 def mk_sample(dst_path: Path, label: str, duration: float, emotions: Dict[Emotion, float]) -> DatasetSample:
     return (dst_path, label, label, duration, emotions)
@@ -99,9 +99,13 @@ def conditioningset_writer(references_dir: Path):
                 continue
             # Pack samples into a single reference wav
             packed_samples = pack_reference_samples(6.0, group_samples)
-            dst_path = references_dir / f"{emotion}.wav"
-            print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
-            make_reference_wav(dst_path, packed_samples)
+            packed_duration = sum([get_sample_length(sample) for sample in packed_samples])
+            if is_valid_conditioning_length(packed_duration):
+                dst_path = references_dir / f"{emotion}.wav"
+                print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
+                make_reference_wav(dst_path, packed_samples)
+            else:
+                print(f"Skipping {emotion} reference due to invalid duration: {packed_duration:.2f} seconds")
     return writer
 
 def find_conditioning_sample(references_dir: Path, emotion: Emotion) -> Path:

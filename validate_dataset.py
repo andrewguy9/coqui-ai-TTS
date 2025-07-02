@@ -43,11 +43,14 @@ def validate_sample_audio_length(r: DatasetSample) -> bool:
     _, _, _, duration, _ = r
     return duration <= max_audio_length
 
-def validate_sample_conditioning_length(r: DatasetSample) -> bool:
+def is_valid_conditioning_length(duration: float) -> bool:
     min_conditioning_length = 3  # seconds
     max_conditioning_length = 6  # seconds
-    _, _, _, duration, _ = r
     return min_conditioning_length <= duration <= max_conditioning_length
+
+def validate_sample_conditioning_length(r: DatasetSample) -> bool:
+    _, _, _, duration, _ = r
+    return is_valid_conditioning_length(duration)
 
 import spacy
 from spacy.matcher import Matcher
@@ -177,7 +180,7 @@ training_validators: List[Callable[[DatasetSample], bool]] = [
     validate_outcries,]
 conditioning_validators: List[Callable[[DatasetSample], bool]] = [
     validate_outcries,
-    # validate_sample_conditioning_length, # TODO trying out compound conditioning samples.
+    validate_sample_conditioning_length, # TODO trying out compound conditioning samples.
 ]
 
 # TODO every-pred
