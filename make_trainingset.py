@@ -5,7 +5,7 @@ from audio_emotion import EmotionFallbacks
 from functional_tools import flat_map, identity, juxt, uniq
 from label_audio import Emotion
 from path_utils import is_audio, walk_paths, is_normal_file, make_extension_replacer
-from itertools import count
+from itertools import count, groupby
 from pathlib import Path
 
 import csv
@@ -45,6 +45,46 @@ def get_primary_emotion(emotions: Dict[Emotion, float]) -> Emotion:
         return "neutral" # Default to NEUTRAL if no emotions are present
     return max(emotions, key=emotions.get) # type: ignore
 
+def sample_emotion(sample: DatasetSample) -> Emotion:
+    """
+    Get the primary emotion from a sample.
+    """
+    _, _, _, _, emotions = sample
+    return get_primary_emotion(emotions)
+
+def pack_reference_samples(max_duration: float, samples: List[DatasetSample]):
+    """
+    Take a list of samples and find a way to maximally pack clips into a single reference sample.
+    Returns a list of the DatasetSample objects which can be combined.
+    Optimizes for the fewest number of samples which get as close to the max_duration as possible.
+    """
+    ordered_samples = sorted(samples, key=get_sample_length, reverse=True)
+    references = []
+    total_duration = 0.0
+    for candidate in ordered_samples:
+        candidate_duration = get_sample_length(candidate)
+        if total_duration + candidate_duration <= max_duration:
+            references.append(candidate)
+            total_duration += candidate_duration
+            continue
+    return references
+
+from torchaudio import load, save
+from torch import cat
+
+def make_reference_wav(dst_path: Path, samples: List[DatasetSample]):
+    """
+    Combine the given samples into a single wav file at the dst_path.
+    """
+    wavs = [load(sample[0]) for sample in samples]
+    # Each wav is a tuple: (tensor, sample_rate)
+    tensors = [wav[0] for wav in wavs]
+    sample_rate = wavs[0][1]
+    combined = cat(tensors, dim=1)
+    save(dst_path, combined, sample_rate)
+
+from itertools import groupby
+
 def conditioningset_writer(references_dir: Path):
     """
     """
@@ -65,7 +105,24 @@ def conditioningset_writer(references_dir: Path):
             dst_path = references_dir / f"{emotion}.wav"
             print(f"Copying {wav_path} to {dst_path}")
             copyfile(wav_path, dst_path)
-    return writer
+
+    def writer2(samples: List[DatasetSample]):
+        """
+        Produces a single reference wav file for each emotion.
+        """
+        # First, sort samples by primary emotion so groupby works correctly
+        sorted_samples = sorted(samples, key=sample_emotion)
+        emotion_samples = groupby(sorted_samples, key=sample_emotion)
+        for emotion, group in emotion_samples:
+            group_samples = list(group)
+            if not group_samples:
+                continue
+            # Pack samples into a single reference wav
+            packed_samples = pack_reference_samples(6.0, group_samples)
+            dst_path = references_dir / f"{emotion}.wav"
+            print(f"Creating reference for {emotion} at {dst_path}")
+            make_reference_wav(dst_path, packed_samples)
+    return writer2
 
 def find_conditioning_sample(references_dir: Path, emotion: Emotion) -> Path:
     path = references_dir / f"{emotion}.wav"

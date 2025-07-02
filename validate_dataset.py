@@ -5,7 +5,9 @@ from pathlib import Path
 
 import csv
 
-DatasetSample = Tuple[Path, str, str, float, Dict[Emotion, float]]  # (auto_file_stem, unnormalized text, normalized_text)
+# (auto_file_stem, unnormalized_text, normalized_text, duration, emotions)
+DatasetSample = Tuple[Path, str, str, float, Dict[Emotion, float]]
+
 def dataset_reader(dataset_path: Path) -> Iterator[DatasetSample]:
     metadata_path = dataset_path / "metadata.csv"
     wav_dir = dataset_path / "wavs"
