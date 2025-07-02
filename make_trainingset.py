@@ -83,30 +83,10 @@ def make_reference_wav(dst_path: Path, samples: List[DatasetSample]):
     combined = cat(tensors, dim=1)
     save(dst_path, combined, sample_rate)
 
+
 from itertools import groupby
-
 def conditioningset_writer(references_dir: Path):
-    """
-    """
     def writer(samples: List[DatasetSample]):
-        """
-        Finds one sample per emotion and copies it to a references directory.
-        Keeps the longest sample for each emotion.
-        """
-        example_samples: Dict[Emotion, DatasetSample] = {}
-        for sample in samples:
-            wav_path, _, _, _, emotions = sample
-            duration = get_sample_length(sample)
-            primary_emotion = get_primary_emotion(emotions)
-            if primary_emotion not in example_samples or duration > get_sample_length(example_samples[primary_emotion]):
-                example_samples[primary_emotion] = sample
-        for emotion, sample in example_samples.items():
-            wav_path, _, _, _, _ = sample
-            dst_path = references_dir / f"{emotion}.wav"
-            print(f"Copying {wav_path} to {dst_path}")
-            copyfile(wav_path, dst_path)
-
-    def writer2(samples: List[DatasetSample]):
         """
         Produces a single reference wav file for each emotion.
         """
@@ -122,7 +102,7 @@ def conditioningset_writer(references_dir: Path):
             dst_path = references_dir / f"{emotion}.wav"
             print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
             make_reference_wav(dst_path, packed_samples)
-    return writer2
+    return writer
 
 def find_conditioning_sample(references_dir: Path, emotion: Emotion) -> Path:
     path = references_dir / f"{emotion}.wav"
