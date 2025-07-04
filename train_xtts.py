@@ -242,11 +242,13 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     )
     trainer.fit()
     # Copy reference files to the model directory
+    run_dir= trainer.output_path
     for emotion, ref_path in SPEAKER_REFERENCES.items():
-        dst_path = training_dir / f"{emotion}.wav"
+        dst_path = run_dir/ f"{emotion}.wav"
+
         print("Created reference file:", dst_path)
         copyfile(ref_path, dst_path)
-    base_reference = training_dir / "reference.wav"
+    base_reference = run_dir / "reference.wav"
     copyfile(SPEAKER_REFERENCES['neutral'], base_reference)
     print("Created reference file:", base_reference)
 
