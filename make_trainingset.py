@@ -1,5 +1,5 @@
 import json
-from typing import Dict, Iterator, List, Tuple, get_args
+from typing import Dict, Iterable, Iterator, List, Tuple, get_args
 from docopt import docopt
 from audio_emotion import EmotionFallbacks
 from functional_tools import flat_map, identity, juxt, uniq
@@ -8,16 +8,28 @@ from path_utils import is_audio, walk_paths, is_normal_file, make_extension_repl
 from itertools import count, groupby
 from pathlib import Path
 
-import csv
-
 from shutil import copyfile
-from validate_dataset import get_audio_duration, is_valid_conditioning_length, training_validators, conditioning_validators, compose_validators, get_sample_length, DatasetSample
+from validate_dataset import is_valid_conditioning_length, training_validators, conditioning_validators, compose_validators, DatasetSampleDict
 
-def mk_sample(dst_path: Path, label: str, duration: float, emotions: Dict[Emotion, float]) -> DatasetSample:
-    return (dst_path, label, label, duration, emotions)
+def mk_sample(dst_path: Path, label: str, duration: float, emotions: Dict[Emotion, float]) -> DatasetSampleDict:
+    return {
+        # "Path": dst_path,
+        "identifier": str(dst_path.stem),
+        "unnormalized_text": label,
+        "normalized_text": label,
+        "duration": duration,
+        "emotions": emotions,
+        "speaker_name": dst_path.parent.parent.stem  # Assuming speaker name is the parent directory of the wav file
+    }
+
+from torchaudio import info as audio_info
+
+def get_audio_duration(audio_path: Path) -> float:
+    metadata = audio_info(audio_path)
+    return metadata.num_frames / metadata.sample_rate
 
 def samples_generator(wav_dir: Path):
-    def generate(data: List[Tuple[int, Path, str, Dict[Emotion, float]]]) -> Iterator[DatasetSample]:
+    def generate(data: List[Tuple[int, Path, str, Dict[Emotion, float]]]) -> Iterator[DatasetSampleDict]:
         for index, path, label, emotions in data:
             print(f"Copying {path} to {wav_dir / f'{index:05d}.wav'}")
             dst_path = wav_dir / f"{index:05d}.wav" # TODO they are not always wavs!
@@ -27,13 +39,12 @@ def samples_generator(wav_dir: Path):
             yield row
     return generate
 
+# TODO wav_dir is unused.
 def trainingset_writer(metadata_path: Path, wav_dir: Path):
-    def writer(data: List[DatasetSample]):
-        with metadata_path.open('w', newline='') as csvfile:
-            writer = csv.writer(csvfile, delimiter="|")
-            for wav, unnorm, norm, duration, emotions in data:
-                emo_cols = [emotions.get(e, 0.0) for e in get_args(Emotion)]
-                writer.writerow([wav.stem, unnorm, norm, duration, *emo_cols])
+    def writer(samples: Iterable[DatasetSampleDict]):
+        realized = list(samples)
+        with metadata_path.open('w') as json_file:
+            json.dump(realized, json_file, indent=4)
     return writer
 
 def get_primary_emotion(emotions: Dict[Emotion, float]) -> Emotion:
@@ -45,14 +56,16 @@ def get_primary_emotion(emotions: Dict[Emotion, float]) -> Emotion:
         return "neutral" # Default to NEUTRAL if no emotions are present
     return max(emotions, key=emotions.get) # type: ignore
 
-def sample_emotion(sample: DatasetSample) -> Emotion:
+def sample_emotion(sample: DatasetSampleDict) -> Emotion:
     """
     Get the primary emotion from a sample.
     """
-    _, _, _, _, emotions = sample
-    return get_primary_emotion(emotions)
+    return get_primary_emotion(sample['emotions'])
 
-def pack_reference_samples(max_duration: float, samples: List[DatasetSample]):
+def get_sample_length(r: DatasetSampleDict) -> float:
+    return r['duration']
+
+def pack_reference_samples(max_duration: float, samples: List[DatasetSampleDict]):
     """
     Take a list of samples and find a way to maximally pack clips into a single reference sample.
     Returns a list of the DatasetSample objects which can be combined.
@@ -72,11 +85,11 @@ def pack_reference_samples(max_duration: float, samples: List[DatasetSample]):
 from torchaudio import load, save
 from torch import cat
 
-def make_reference_wav(dst_path: Path, samples: List[DatasetSample]):
+def make_reference_wav(dst_path: Path, samples: List[Path]):
     """
     Combine the given samples into a single wav file at the dst_path.
     """
-    wavs = [load(sample[0]) for sample in samples]
+    wavs = [load(sample) for sample in samples]
     # Each wav is a tuple: (tensor, sample_rate)
     tensors = [wav[0] for wav in wavs]
     sample_rate = wavs[0][1]
@@ -84,9 +97,8 @@ def make_reference_wav(dst_path: Path, samples: List[DatasetSample]):
     save(dst_path, combined, sample_rate)
 
 
-from itertools import groupby
-def conditioningset_writer(references_dir: Path):
-    def writer(samples: List[DatasetSample]):
+def conditioningset_writer(wav_dir, references_dir: Path):
+    def writer(samples: List[DatasetSampleDict]):
         """
         Produces a single reference wav file for each emotion.
         """
@@ -103,7 +115,8 @@ def conditioningset_writer(references_dir: Path):
             if is_valid_conditioning_length(packed_duration):
                 dst_path = references_dir / f"{emotion}.wav"
                 print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
-                make_reference_wav(dst_path, packed_samples)
+                packed_paths = [wav_dir / Path(sample['identifier']).with_suffix(".wav") for sample in packed_samples]
+                make_reference_wav(dst_path, packed_paths)
             else:
                 print(f"Skipping {emotion} reference due to invalid duration: {packed_duration:.2f} seconds")
     return writer
@@ -148,11 +161,11 @@ def trainingset_builder(output_dir: Path, sources: List[Path]):
     if not output_dir.exists():
         output_dir.mkdir(parents=True, exist_ok=True)
 
-    metadata_path = output_dir / "metadata.csv"
+    metadata_path = output_dir / "metadata.json"
     wav_dir = output_dir / "wavs"
     reference_dir = output_dir / "references"
     label_writer = trainingset_writer(metadata_path, wav_dir)
-    conditioning_writer = conditioningset_writer(reference_dir)
+    conditioning_writer = conditioningset_writer(wav_dir, reference_dir)
 
     wav_dir.mkdir(parents=True, exist_ok=True)
     reference_dir.mkdir(parents=True, exist_ok=True)
