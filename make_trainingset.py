@@ -33,8 +33,12 @@ def normalize_audio_from_path(src: Path, dst: Path, sample_rate: int):
     """
     Convert the source audio file to the specified sample rate and save it to the destination path.
     The input audio file can be any format supported by torchaudio. The output will be a wav file.
+    If the input file has multiple channels, it will be converted to mono.
     """
     audio, original_sample_rate = load(src)
+    # Convert to mono if not already
+    if audio.shape[0] > 1:
+        audio = audio.mean(dim=0, keepdim=True)
     if original_sample_rate != sample_rate:
         resampler = T.Resample(orig_freq=original_sample_rate, new_freq=sample_rate)
         audio = resampler(audio)
