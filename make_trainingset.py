@@ -22,11 +22,23 @@ def mk_sample(dst_path: Path, label: str, duration: float, emotions: Dict[Emotio
         "speaker_name": dst_path.parent.parent.stem  # Assuming speaker name is the parent directory of the wav file
     }
 
-from torchaudio import info as audio_info
+from torchaudio import info as audio_info, load, save
+import torchaudio.transforms as T
 
 def get_audio_duration(audio_path: Path) -> float:
     metadata = audio_info(audio_path)
     return metadata.num_frames / metadata.sample_rate
+
+def normalize_audio_from_path(src: Path, dst: Path, sample_rate: int):
+    """
+    Convert the source audio file to the specified sample rate and save it to the destination path.
+    The input audio file can be any format supported by torchaudio. The output will be a wav file.
+    """
+    audio, original_sample_rate = load(src)
+    if original_sample_rate != sample_rate:
+        resampler = T.Resample(orig_freq=original_sample_rate, new_freq=sample_rate)
+        audio = resampler(audio)
+    save(dst, audio, sample_rate)
 
 def samples_generator(wav_dir: Path):
     def generate(data: List[Tuple[int, Path, str, Dict[Emotion, float]]]) -> Iterator[DatasetSampleDict]:
@@ -34,7 +46,7 @@ def samples_generator(wav_dir: Path):
             print(f"Copying {path} to {wav_dir / f'{index:05d}.wav'}")
             dst_path = wav_dir / f"{index:05d}.wav" # TODO they are not always wavs!
             duration = get_audio_duration(path)
-            copyfile(path, dst_path)
+            normalize_audio_from_path(path, dst_path, 22050)  # TODO Assuming 22050 is the desired sample rate
             row = mk_sample(dst_path, label, duration, emotions)
             yield row
     return generate
