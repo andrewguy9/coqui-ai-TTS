@@ -17,7 +17,7 @@ from path_utils import get_base_name, is_audio, walk_paths
 from shutil import copyfile
 
 import json
-from validate_dataset import DatasetSampleDict
+from validate_dataset import DatasetSampleDict, dataset_reader
 
 def model_run_prefix(dataset_name: str) -> str:
     return f"naqqal_{dataset_name}"
@@ -74,7 +74,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
 
     config_dataset = BaseDatasetConfig(
         # TODO we need to replace with our json format.
-        formatter=formatter,
+        formatter="Does not matter",
         dataset_name=dataset_name,
         path=str(dataset_path),
         meta_file_train=str(metadata_path.relative_to(dataset_path)),
@@ -211,6 +211,7 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     # load training samples
     train_samples, eval_samples = load_tts_samples(
         DATASETS_CONFIG_LIST,
+        formatter=formatter,
         eval_split=True,
         eval_split_max_size=config.eval_split_max_size, # This was set to None, meaning the eval split can be as big as the training set.
         eval_split_size=config.eval_split_size,
