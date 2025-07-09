@@ -12,7 +12,7 @@ from TTS.tts.models.xtts import XttsAudioConfig
 from TTS.utils.manage import ModelManager
 from docopt import docopt
 
-from make_trainingset import conditingset_reader
+from make_trainingset import conditingset_reader, get_primary_emotion
 from path_utils import get_base_name, is_audio, walk_paths
 from shutil import copyfile
 
@@ -54,7 +54,14 @@ def formatter(root_path, meta_file, **kwargs):
             speaker_name = ds['speaker_name']
             wav_file = (Path(root_path) / "wavs" / f"{ds['identifier']}.wav")
             text = ds['normalized_text']
-            items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "root_path": root_path})
+            emotion = get_primary_emotion(ds['emotions'])
+            items.append({
+                "text": text,
+                "audio_file": wav_file,
+                "speaker_name": speaker_name,
+                "root_path": root_path,
+                "emotion_name": emotion,
+                })
     return items
 
 def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
