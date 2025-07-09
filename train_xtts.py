@@ -16,6 +16,9 @@ from make_trainingset import conditingset_reader
 from path_utils import get_base_name, is_audio, walk_paths
 from shutil import copyfile
 
+import json
+from validate_dataset import DatasetSampleDict
+
 def model_run_prefix(dataset_name: str) -> str:
     return f"naqqal_{dataset_name}"
 
@@ -34,16 +37,37 @@ def find_models(run_dir: Path):
     no_suffix = map(lambda s: re.sub(r"-.*$", "", s), no_prefixes)
     yield from no_suffix
 
+def formatter(root_path, meta_file, **kwargs):
+    json_file = Path(root_path) / meta_file
+    items = []
+    with open(json_file, encoding="utf-8") as fh:
+        samples = json.load(fh)
+        for sample in samples:
+            ds = DatasetSampleDict(
+                identifier=str(sample['identifier']),
+                unnormalized_text=sample['unnormalized_text'],
+                normalized_text=sample['normalized_text'],
+                duration=sample['duration'],
+                emotions=sample['emotions'],
+                speaker_name=sample['speaker_name'],
+            )
+            speaker_name = ds['speaker_name']
+            wav_file = (Path(root_path) / "wavs" / f"{ds['identifier']}.wav")
+            text = ds['normalized_text']
+            items.append({"text": text, "audio_file": wav_file, "speaker_name": speaker_name, "root_path": root_path})
+    return items
+
 def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
     # Define here the dataset that you want to use for the fine-tuning on.
     dataset_name = get_base_name(dataset_path)
 
-    metadata_path = dataset_path / "metadata.csv"
+    metadata_path = dataset_path / "metadata.json"
     if not metadata_path.exists():
         raise FileNotFoundError(f"Dataset metadata file not found: {metadata_path}")
 
     config_dataset = BaseDatasetConfig(
-        formatter="ljspeech",
+        # TODO we need to replace with our json format.
+        formatter=formatter,
         dataset_name=dataset_name,
         path=str(dataset_path),
         meta_file_train=str(metadata_path.relative_to(dataset_path)),
