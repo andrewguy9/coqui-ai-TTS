@@ -200,7 +200,7 @@ def trainingset_builder(output_dir: Path, sources: List[Path]):
     path_groups = map(mk_path_pairs, uniq_audio_paths) # wav, label, emote
     have_label_files = filter(lambda fp: is_normal_file(fp[0]) and is_normal_file(fp[1]) and is_normal_file(fp[2]), path_groups)
     path_data: Iterator[Tuple[int, Path, str, Dict[Emotion, float]]] = map(lambda group, index: (index, group[0], load_tag(group[1]), load_emote(group[2])), have_label_files, count())
-    samples = list(mk_samples(tqdm(path_data)))
+    samples = list(mk_samples(tqdm(list(path_data))))
 
     training_samples = filter(is_valid_training_sample, samples)
     conditioning_samples = filter(is_valid_conditioning_sample, samples)
