@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import os
 from pathlib import Path
 import re
@@ -76,7 +77,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
 
     config_dataset = BaseDatasetConfig(
         # TODO we need to replace with our json format.
-        formatter=custom_formatter,
+        formatter="custom_formatter",
         dataset_name=dataset_name,
         path=str(dataset_path),
         meta_file_train=str(metadata_path.relative_to(dataset_path)),
@@ -211,7 +212,6 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     train_samples, eval_samples = load_tts_samples(
         datasets_config,
         eval_split=True,
-        formatter=custom_formatter,
         eval_split_max_size=config.eval_split_max_size, # This was set to None, meaning the eval split can be as big as the training set.
         eval_split_size=config.eval_split_size,
     )
@@ -308,11 +308,19 @@ def check_cuda_devices(device_name: str | None):
             else:
                 print("No GPU found. Using CPU.")
 
+import TTS.tts.datasets as td
+def add_formatter(name: str, formatter: Callable) -> None:
+    if not hasattr(td, name.lower()):
+        setattr(td, name.lower(), formatter)
+    else:
+        raise ValueError(f"Formatter {name} already exists.")
+
 def main(args: Dict) -> None:
 
     device_name: str | None = args['--device']
     check_cuda_devices(device_name)
 
+    add_formatter("custom_formatter", custom_formatter)
     datasets_config = []
     for dataset_str_path in args['<dataset>']:
         dataset_path = Path(dataset_str_path)
