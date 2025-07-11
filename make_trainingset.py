@@ -1,6 +1,7 @@
 import json
 from typing import Dict, Iterable, Iterator, List, Tuple, get_args
 from docopt import docopt
+from tqdm import tqdm
 from audio_emotion import EmotionFallbacks
 from functional_tools import flat_map, identity, juxt, uniq
 from label_audio import Emotion
@@ -47,7 +48,7 @@ def normalize_audio_from_path(src: Path, dst: Path, sample_rate: int):
 def samples_generator(wav_dir: Path):
     def generate(data: List[Tuple[int, Path, str, Dict[Emotion, float]]]) -> Iterator[DatasetSampleDict]:
         for index, path, label, emotions in data:
-            print(f"Copying {path} to {wav_dir / f'{index:05d}.wav'}")
+            # print(f"Copying {path} to {wav_dir / f'{index:05d}.wav'}")
             dst_path = wav_dir / f"{index:05d}.wav" # TODO they are not always wavs!
             duration = get_audio_duration(path)
             normalize_audio_from_path(path, dst_path, 22050)  # TODO Assuming 22050 is the desired sample rate
@@ -130,11 +131,12 @@ def conditioningset_writer(wav_dir, references_dir: Path):
             packed_duration = sum([get_sample_length(sample) for sample in packed_samples])
             if is_valid_conditioning_length(packed_duration):
                 dst_path = references_dir / f"{emotion}.wav"
-                print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
+                # print(f"Creating reference for {emotion} at {dst_path} with {len(packed_samples)} samples")
                 packed_paths = [wav_dir / Path(sample['identifier']).with_suffix(".wav") for sample in packed_samples]
                 make_reference_wav(dst_path, packed_paths)
             else:
-                print(f"Skipping {emotion} reference due to invalid duration: {packed_duration:.2f} seconds")
+                # print(f"Skipping {emotion} reference due to invalid duration: {packed_duration:.2f} seconds")
+                pass
     return writer
 
 def find_conditioning_sample(references_dir: Path, emotion: Emotion) -> Path:
@@ -198,7 +200,7 @@ def trainingset_builder(output_dir: Path, sources: List[Path]):
     path_groups = map(mk_path_pairs, uniq_audio_paths) # wav, label, emote
     have_label_files = filter(lambda fp: is_normal_file(fp[0]) and is_normal_file(fp[1]) and is_normal_file(fp[2]), path_groups)
     path_data: Iterator[Tuple[int, Path, str, Dict[Emotion, float]]] = map(lambda group, index: (index, group[0], load_tag(group[1]), load_emote(group[2])), have_label_files, count())
-    samples = list(mk_samples(path_data))
+    samples = list(mk_samples(tqdm(path_data)))
 
     training_samples = filter(is_valid_training_sample, samples)
     conditioning_samples = filter(is_valid_conditioning_sample, samples)
