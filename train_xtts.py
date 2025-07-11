@@ -39,7 +39,7 @@ def find_models(run_dir: Path):
     no_suffix = map(lambda s: re.sub(r"-.*$", "", s), no_prefixes)
     yield from no_suffix
 
-def formatter(root_path, meta_file, **kwargs):
+def custom_formatter(root_path, meta_file, **kwargs):
     json_file = Path(root_path) / meta_file
     items = []
     with open(json_file, encoding="utf-8") as fh:
@@ -76,7 +76,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
 
     config_dataset = BaseDatasetConfig(
         # TODO we need to replace with our json format.
-        formatter="Does not matter",
+        formatter=custom_formatter,
         dataset_name=dataset_name,
         path=str(dataset_path),
         meta_file_train=str(metadata_path.relative_to(dataset_path)),
@@ -106,8 +106,8 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     eval_size_pct = (sample_count ** .5) / sample_count
     if eval_size_pct * sample_count < 2:
         raise ValueError(f"Dataset is too small ({sample_count}) for evaluation.")
-    print("DATASET CONFIGURATION:")
-    print(datasets_config)
+    # print("DATASET CONFIGURATION:")
+    # print(datasets_config)
 
     # Define the path where XTTS v2.0.1 files will be downloaded
     CHECKPOINTS_OUT_PATH = str(os.path.join(str(training_dir), "XTTS_v2.0_original_model_files/"))
@@ -210,8 +210,8 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     # load training samples
     train_samples, eval_samples = load_tts_samples(
         datasets_config,
-        formatter=formatter,
         eval_split=True,
+        formatter=custom_formatter,
         eval_split_max_size=config.eval_split_max_size, # This was set to None, meaning the eval split can be as big as the training set.
         eval_split_size=config.eval_split_size,
     )
