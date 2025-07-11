@@ -18,6 +18,7 @@ from shutil import copyfile
 
 import json
 from validate_dataset import DatasetSampleDict, dataset_reader
+import torch
 
 def model_run_prefix(dataset_name: str) -> str:
     return f"naqqal_{dataset_name}"
@@ -284,7 +285,22 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     copyfile(SPEAKER_REFERENCES['neutral'], base_reference)
     print("Created reference file:", base_reference)
 
+def check_cuda_devices():
+    """
+    Check to see if CUDA_VISIBLE_DEVICES is set.
+    If it is not set, set it to the first available GPU.
+    """
+    if "CUDA_VISIBLE_DEVICES" not in os.environ:
+        gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
+        if gpus:
+            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpus[0].name)
+        else:
+            print("No GPU found. Please set CUDA_VISIBLE_DEVICES.")
+
 def main(args):
+
+    check_cuda_devices()
+
     dataset_path = Path(args['<dataset>'])
     dataset_name = get_base_name(dataset_path)
 
@@ -293,7 +309,6 @@ def main(args):
     training_dir = Path(args['--output'])
 
     run_name = model_run_prefix(dataset_name)
-
     RUNS = find_runs(run_name, training_dir)
     if len(RUNS) > 0:
         print(f"Found existing runs: {[str(run) for run in RUNS]}. Skipping...")
