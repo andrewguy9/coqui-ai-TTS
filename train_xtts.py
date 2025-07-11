@@ -296,7 +296,7 @@ def main(args):
 
     RUNS = find_runs(run_name, training_dir)
     if len(RUNS) > 0:
-        print(f"Found existing runs: {[str(training_dir / run) for run in RUNS]}. Skipping...")
+        print(f"Found existing runs: {[str(run) for run in RUNS]}. Skipping...")
         return
     else:
         print("No existing runs found. Proceeding with training...")
