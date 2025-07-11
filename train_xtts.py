@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 import re
-from typing import List
+from typing import Dict, List
 
 from trainer import Trainer, TrainerArgs
 
@@ -285,21 +285,35 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     copyfile(SPEAKER_REFERENCES['neutral'], base_reference)
     print("Created reference file:", base_reference)
 
-def check_cuda_devices():
+def check_cuda_devices(device_name: str | None):
     """
-    Check to see if CUDA_VISIBLE_DEVICES is set.
-    If it is not set, set it to the first available GPU.
+    Set CUDA_VISIBLE_DEVICES based on device_name if provided.
+    If device_name is None, use the first available GPU if present, otherwise use CPU.
+    Print a warning if using CPU and a GPU was detected.
     """
-    if "CUDA_VISIBLE_DEVICES" not in os.environ:
-        gpus = [torch.cuda.device(i) for i in range(torch.cuda.device_count())]
-        if gpus:
-            os.environ["CUDA_VISIBLE_DEVICES"] = str(gpus[0].name)
+    if device_name:
+        # If device_name is like 'cuda:0', extract the GPU index
+        if device_name.startswith("cuda:"):
+            gpu_index = device_name.split(":")[1]
+            os.environ["CUDA_VISIBLE_DEVICES"] = gpu_index
+        elif device_name == "cpu":
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""
         else:
-            print("No GPU found. Please set CUDA_VISIBLE_DEVICES.")
+            print(f"Unknown device_name format: {device_name}")
+    else:
+        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+            os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        else:
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""
+            if torch.cuda.device_count() > 0:
+                print("Warning: No GPU selected, using CPU even though a GPU was detected.")
+            else:
+                print("No GPU found. Using CPU.")
 
-def main(args):
+def main(args: Dict) -> None:
 
-    check_cuda_devices()
+    device_name: str | None = args['--device']
+    check_cuda_devices(device_name)
 
     dataset_path = Path(args['<dataset>'])
     dataset_name = get_base_name(dataset_path)
@@ -326,6 +340,7 @@ Usage:
 
 Options:
   --output=<path>  Directory to save the training output [default: ./run/training/].
+  --device=<device> Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
 """
 if __name__ == "__main__":
     args = docopt(USAGE)
