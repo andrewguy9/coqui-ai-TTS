@@ -20,8 +20,9 @@ import json
 from validate_dataset import DatasetSampleDict, dataset_reader
 import torch
 
-def model_run_prefix(dataset_name: str) -> str:
-    return f"naqqal_{dataset_name}"
+# TODO retire
+def model_run_prefix(model_name: str) -> str:
+    return f"{model_name}"
 
 def find_runs(run_name: str, run_dir: Path) -> List[Path]:
     print("FINDING RUNS FOR DATASET:", run_name, "IN DIRECTORY:", run_dir)
@@ -84,7 +85,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
     return config_dataset
 
 
-def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: Path):
+def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], training_dir: Path):
     # setup variables
     # Logging parameters
     PROJECT_NAME = "naqqal"
@@ -99,17 +100,14 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
     # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
 
-    dataset_size = len(config_dataset)
-    if dataset_size == 0:
+    sample_count = sum(map(len, datasets_config))
+    if sample_count == 0:
         raise ValueError(f"No samples found in the dataset. Please check the dataset path and metadata file.")
-    eval_size_pct = (dataset_size ** .5) / dataset_size
-    if eval_size_pct * dataset_size < 2:
-        raise ValueError(f"Dataset is too small ({dataset_size}) for evaluation.")
+    eval_size_pct = (sample_count ** .5) / sample_count
+    if eval_size_pct * sample_count < 2:
+        raise ValueError(f"Dataset is too small ({sample_count}) for evaluation.")
     print("DATASET CONFIGURATION:")
-    print(config_dataset)
-
-    # Add here the configs of the datasets
-    DATASETS_CONFIG_LIST = [config_dataset]
+    print(datasets_config)
 
     # Define the path where XTTS v2.0.1 files will be downloaded
     CHECKPOINTS_OUT_PATH = str(os.path.join(str(training_dir), "XTTS_v2.0_original_model_files/"))
@@ -211,7 +209,7 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
 
     # load training samples
     train_samples, eval_samples = load_tts_samples(
-        DATASETS_CONFIG_LIST,
+        datasets_config,
         formatter=formatter,
         eval_split=True,
         eval_split_max_size=config.eval_split_max_size, # This was set to None, meaning the eval split can be as big as the training set.
@@ -225,9 +223,9 @@ def train_voice(run_name: str, config_dataset: BaseDatasetConfig, training_dir: 
     print("Example evaluation sample:", eval_samples[0])
 
     # Training sentences generations
-    SPEAKER_REFERENCES = conditingset_reader(Path(config_dataset.path) / "references")
+    SPEAKER_REFERENCES = conditingset_reader(Path(datasets_config.path) / "references")
     print("SPEAKER_REFERENCES:", *SPEAKER_REFERENCES.items(), sep="\n")
-    LANGUAGE = config_dataset.language
+    LANGUAGE = datasets_config.language
 
     config.test_sentences = [
             {
@@ -315,14 +313,17 @@ def main(args: Dict) -> None:
     device_name: str | None = args['--device']
     check_cuda_devices(device_name)
 
-    dataset_path = Path(args['<dataset>'])
-    dataset_name = get_base_name(dataset_path)
-
+    datasets_config = []
+    for dataset_str_path in args['<dataset>']:
+        dataset_path = Path(dataset_str_path)
+        dataset_name = get_base_name(dataset_path)
+        datasets_config.append(dataset_configuration(dataset_path))
 
     # Set here the path that the checkpoints will be saved. Default: ./run/training/
     training_dir = Path(args['--output'])
 
-    run_name = model_run_prefix(dataset_name)
+    model_name = args['<name>']
+    run_name = model_run_prefix(model_name)
     RUNS = find_runs(run_name, training_dir)
     if len(RUNS) > 0:
         print(f"Found existing runs: {[str(run) for run in RUNS]}. Skipping...")
@@ -330,13 +331,12 @@ def main(args: Dict) -> None:
     else:
         print("No existing runs found. Proceeding with training...")
 
-    dataset_config = dataset_configuration(dataset_path)
-    train_voice(run_name, dataset_config, training_dir)
+    train_voice(run_name, datasets_config, training_dir)
 
 USAGE = """
 Train GPT XTTS model.
 Usage:
-  train_xtts.py [options] <dataset>
+  train_xtts.py [options] <name> <dataset>...
 
 Options:
   --output=<path>  Directory to save the training output [default: ./run/training/].
