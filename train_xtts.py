@@ -344,7 +344,7 @@ def main(args: Dict) -> None:
     else:
         print("No existing runs found. Proceeding with training...")
 
-    batch_size = int(args['--batch_size'])
+    batch_size = int(args['--batch-size'])
     train_voice(run_name, datasets_config, training_dir, batch_size=batch_size)
 
 USAGE = """
