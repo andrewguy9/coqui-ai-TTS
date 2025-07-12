@@ -78,7 +78,6 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
         raise FileNotFoundError(f"Dataset metadata file not found: {metadata_path}")
 
     config_dataset = BaseDatasetConfig(
-        # TODO we need to replace with our json format.
         formatter="custom_formatter",
         dataset_name=dataset_name,
         path=str(dataset_path),
