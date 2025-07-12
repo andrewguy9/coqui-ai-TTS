@@ -363,6 +363,7 @@ if __name__ == "__main__":
     # When working with trainer.distribute, many distribution parameters are passed in before the -- marker.
     if '--' in argv:                          # keep only the part after `--`
         argv = argv[argv.index('--') + 1:]
+        print(f"Detected '--' marker in arguments. Proceeding with arguments {argv}")
 
     args = docopt(__doc__, argv=argv)
     main(args)
