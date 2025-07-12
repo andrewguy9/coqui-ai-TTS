@@ -353,9 +353,9 @@ Usage:
   train_xtts.py [options] <name> <dataset>...
 
 Options:
-  --output=<path>     Directory to save the training output [default: ./run/training/].
-  --device=<device>   Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
-  --batch-size=<size> Batch size for training [default: 9].
+  --output=<path>      Directory to save the training output [default: ./run/training/].
+  --device=<device>    Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
+  --batch-size=<size>  Batch size for training [default: 9].
 """
 if __name__ == "__main__":
     args = docopt(USAGE)
