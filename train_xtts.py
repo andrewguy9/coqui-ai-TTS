@@ -179,7 +179,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         run_name=run_name,
         project_name=PROJECT_NAME,
         run_description=f"""
-            GPT XTTS training on {run_name} voice.
+            GPT XTTS training on {run_name}.
             """,
         dashboard_logger=DASHBOARD_LOGGER,
         logger_uri=LOGGER_URI,
@@ -217,11 +217,20 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         eval_split_size=config.eval_split_size,
     )
 
+    dataset_speakers: Dict[str, set[str]] = {}
+    for sample in train_samples:
+        speaker_name = sample['speaker_name']
+        dataset_name = sample['dataset_name']
+        dataset_speakers.setdefault(dataset_name, set()).add(speaker_name)
+
     print("TRAINING SAMPLES:")
     print(f"Number of training samples: {len(train_samples)}")
     print("Example training sample:", train_samples[0])
     print(f"Number of evaluation samples: {len(eval_samples)}")
     print("Example evaluation sample:", eval_samples[0])
+    print("DATASET SPEAKERS:")
+    for dataset_name, speakers in dataset_speakers.items():
+        print(f"Dataset: {dataset_name}, Speakers: {', '.join(speakers)}")
 
     # Training sentences generations
     # TODO all this stuff should be the speaker name perhaps namespaced by dataset name.
