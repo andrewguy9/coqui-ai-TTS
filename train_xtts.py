@@ -96,7 +96,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
 
     # Training Parameters
     # TODO setup for multi gpu as option.
-    OPTIMIZER_WD_ONLY_ON_WEIGHTS = True  # for multi-gpu training please make it False
+    OPTIMIZER_WD_ONLY_ON_WEIGHTS = False  # for multi-gpu training please make it False
     START_WITH_EVAL = True  # if True it will start with evaluation
     GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
     # Note: we recommend that batch_size * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease batch_size but then set GRAD_ACUMM_STEPS accordingly.
