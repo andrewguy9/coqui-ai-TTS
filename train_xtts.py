@@ -292,6 +292,30 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         copyfile(speaker_references['neutral'], base_reference)
         print("Created reference file:", base_reference)
 
+    # Produce an actors.json for the model
+    actors_info = []
+    for dataset_name, speaker_references in all_speaker_references.items():
+        for emotion, ref_path in speaker_references.items():
+            reference_wav = str(run_dir / f"{dataset_name}_reference.wav")
+            emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in Emotion}
+            actor_data = {
+                "name": dataset_name,
+                "voice": dataset_name,
+                "checkpoint_dir": run_dir,
+                "reference_wav": reference_wav,
+                "performance": {
+                    "speed": 1.0,
+                    "temperature": 1.0,
+                    "language": "en" # TODO option
+                },
+                "emotions": emotion_wavs
+            }
+        actors_info.append(actor_data)
+    actors_json_path = run_dir / "actors.json"
+    with actors_json_path.open('w') as f:
+        json.dump(actors_info, f, indent=4)
+    print("Created actors.json:", actors_json_path)
+
 def check_cuda_devices(device_name: str | None):
     """
     Set CUDA_VISIBLE_DEVICES based on device_name if provided.
