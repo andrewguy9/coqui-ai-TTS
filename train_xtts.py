@@ -2,6 +2,7 @@ from collections.abc import Callable
 import os
 from pathlib import Path
 import re
+import sys
 from typing import Dict, List
 
 from trainer import Trainer, TrainerArgs
@@ -358,5 +359,10 @@ Options:
   --batch-size=<size>  Batch size for training [default: 9].
 """
 if __name__ == "__main__":
-    args = docopt(USAGE)
+    argv = sys.argv[1:]
+    # When working with trainer.distribute, many distribution parameters are passed in before the -- marker.
+    if '--' in argv:                          # keep only the part after `--`
+        argv = argv[argv.index('--') + 1:]
+
+    args = docopt(__doc__, argv=argv)
     main(args)
