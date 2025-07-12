@@ -186,6 +186,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         audio=audio_config,
         batch_group_size=48,
         num_loader_workers=8,
+        batch_size=batch_size,
         eval_batch_size=batch_size,
         eval_split_max_size=None, # None is the default, allow the evaluation split to be as big as the training set.
         eval_split_size = eval_size_pct,
