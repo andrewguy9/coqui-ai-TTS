@@ -347,7 +347,7 @@ def main(args: Dict) -> None:
     RUNS = find_runs(run_name, training_dir)
     if len(RUNS) > 0:
         print(f"Found existing runs: {[str(run) for run in RUNS]}. Skipping...")
-        return
+        # return
     else:
         print("No existing runs found. Proceeding with training...")
 
