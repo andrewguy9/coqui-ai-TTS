@@ -357,6 +357,7 @@ Options:
   --output=<path>      Directory to save the training output [default: ./run/training/].
   --device=<device>    Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
   --batch-size=<size>  Batch size for training [default: 9].
+  --rank=<rank>        Rank of the process in distributed training.
 """
 if __name__ == "__main__":
     argv = sys.argv[1:]
