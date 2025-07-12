@@ -366,5 +366,5 @@ if __name__ == "__main__":
         argv = argv[argv.index('--') + 1:]
         print(f"Detected '--' marker in arguments. Proceeding with arguments {argv}")
 
-    args = docopt(__doc__, argv=argv)
+    args = docopt(USAGE, argv=argv)
     main(args)
