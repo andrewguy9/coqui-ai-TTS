@@ -13,6 +13,7 @@ from TTS.tts.models.xtts import XttsAudioConfig
 from TTS.utils.manage import ModelManager
 from docopt import docopt
 
+from audio_emotion import Emotion
 from make_trainingset import conditingset_reader, get_primary_emotion
 from path_utils import get_base_name, is_audio, walk_paths
 from shutil import copyfile
@@ -223,32 +224,37 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     print("Example evaluation sample:", eval_samples[0])
 
     # Training sentences generations
-    SPEAKER_REFERENCES = conditingset_reader(Path(datasets_config.path) / "references")
-    print("SPEAKER_REFERENCES:", *SPEAKER_REFERENCES.items(), sep="\n")
-    LANGUAGE = datasets_config.language
-
-    config.test_sentences = [
-            {
-                "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
-                "speaker_wav": str(SPEAKER_REFERENCES["neutral"]),
-                "language": LANGUAGE,
-            },
-            {
-                "text": "This cake is great. It's so delicious and moist.",
-                "speaker_wav": str(SPEAKER_REFERENCES['happy']),
-                "language": LANGUAGE,
-            },
-            {
-                "text": "I am not angry, I am just disappointed.",
-                "speaker_wav": str(SPEAKER_REFERENCES['sad']),
-                "language": LANGUAGE,
-            },
-            {
-                "text": "I'm so angry right now, I can't even think straight.",
-                "speaker_wav": str(SPEAKER_REFERENCES['angry']),
-                "language": LANGUAGE,
-            },
-        ]
+    # TODO all this stuff should be the speaker name perhaps namespaced by dataset name.
+    test_sentences = []
+    all_speaker_references: dict[str, dict[Emotion, Path]] = {}
+    for dataset_config in datasets_config:
+        speaker_references = conditingset_reader(Path(dataset_config.path) / "references")
+        print(f"SPEAKER_REFERENCES: {dataset_config.dataset_name}", *speaker_references.items(), sep="\n")
+        LANGUAGE = dataset_config.language
+        test_sentences += [
+                {
+                    "text": "It took me quite a long time to develop a voice, and now that I have it I'm not going to be silent.",
+                    "speaker_wav": str(speaker_references["neutral"]),
+                    "language": LANGUAGE,
+                },
+                {
+                    "text": "This cake is great. It's so delicious and moist.",
+                    "speaker_wav": str(speaker_references['happy']),
+                    "language": LANGUAGE,
+                },
+                {
+                    "text": "I am not angry, I am just disappointed.",
+                    "speaker_wav": str(speaker_references['sad']),
+                    "language": LANGUAGE,
+                },
+                {
+                    "text": "I'm so angry right now, I can't even think straight.",
+                    "speaker_wav": str(speaker_references['angry']),
+                    "language": LANGUAGE,
+                },
+            ]
+        all_speaker_references[dataset_config.dataset_name] = speaker_references
+    config.test_sentences = test_sentences
 
     print("CONFIGURATION:")
     print(config)
@@ -274,14 +280,15 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     trainer.fit()
     # Copy reference files to the model directory
     run_dir= trainer.output_path
-    for emotion, ref_path in SPEAKER_REFERENCES.items():
-        dst_path = run_dir/ f"{emotion}.wav"
-
-        print("Created reference file:", dst_path)
-        copyfile(ref_path, dst_path)
-    base_reference = run_dir / "reference.wav"
-    copyfile(SPEAKER_REFERENCES['neutral'], base_reference)
-    print("Created reference file:", base_reference)
+    # TODO all this dataset_name stuff shoud be the speaker name perhaps namespaced by dataset name.
+    for dataset_name, speaker_references in all_speaker_references.items():
+        for emotion, ref_path in speaker_references.items():
+            dst_path = run_dir/ f"{dataset_name}_{emotion}.wav"
+            print("Created reference file:", dst_path)
+            copyfile(ref_path, dst_path)
+        base_reference = run_dir / f"{dataset_name}_reference.wav"
+        copyfile(speaker_references['neutral'], base_reference)
+        print("Created reference file:", base_reference)
 
 def check_cuda_devices(device_name: str | None):
     """
