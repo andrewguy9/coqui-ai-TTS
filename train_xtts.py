@@ -88,7 +88,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
     return config_dataset
 
 
-def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], training_dir: Path, batch_size: int = 9):
+def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], training_dir: Path, batch_size: int = 9, rank: int = 0):
     # setup variables
     # Logging parameters
     PROJECT_NAME = "naqqal"
@@ -268,6 +268,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
             skip_train_epoch=False,
             start_with_eval=START_WITH_EVAL,
             grad_accum_steps=GRAD_ACUMM_STEPS,
+            rank=rank
         ),
         config,
         output_path=str(training_dir),
@@ -352,7 +353,8 @@ def main(args: Dict) -> None:
         print("No existing runs found. Proceeding with training...")
 
     batch_size = int(args['--batch-size'])
-    train_voice(run_name, datasets_config, training_dir, batch_size=batch_size)
+    rank = int(args['--rank']) if args['--rank'] else 0
+    train_voice(run_name, datasets_config, training_dir, batch_size=batch_size, rank=rank)
 
 USAGE = """
 Train GPT XTTS model.
