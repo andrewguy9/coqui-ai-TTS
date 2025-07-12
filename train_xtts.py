@@ -87,7 +87,7 @@ def dataset_configuration(dataset_path: Path) -> BaseDatasetConfig:
     return config_dataset
 
 
-def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], training_dir: Path):
+def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], training_dir: Path, batch_size: int = 9):
     # setup variables
     # Logging parameters
     PROJECT_NAME = "naqqal"
@@ -98,9 +98,8 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     # TODO setup for multi gpu as option.
     OPTIMIZER_WD_ONLY_ON_WEIGHTS = True  # for multi-gpu training please make it False
     START_WITH_EVAL = True  # if True it will start with evaluation
-    BATCH_SIZE = 10 # set here the batch size
     GRAD_ACUMM_STEPS = 84  # set here the grad accumulation steps
-    # Note: we recommend that BATCH_SIZE * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease BATCH_SIZE but then set GRAD_ACUMM_STEPS accordingly.
+    # Note: we recommend that batch_size * GRAD_ACUMM_STEPS need to be at least 252 for more efficient training. You can increase/decrease batch_size but then set GRAD_ACUMM_STEPS accordingly.
 
     sample_count = sum(map(len, datasets_config))
     if sample_count == 0:
@@ -184,10 +183,9 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         dashboard_logger=DASHBOARD_LOGGER,
         logger_uri=LOGGER_URI,
         audio=audio_config,
-        batch_size=BATCH_SIZE,
         batch_group_size=48,
         num_loader_workers=8,
-        eval_batch_size=BATCH_SIZE,
+        eval_batch_size=batch_size,
         eval_split_max_size=None, # None is the default, allow the evaluation split to be as big as the training set.
         eval_split_size = eval_size_pct,
         print_eval=True,
@@ -346,7 +344,8 @@ def main(args: Dict) -> None:
     else:
         print("No existing runs found. Proceeding with training...")
 
-    train_voice(run_name, datasets_config, training_dir)
+    batch_size = int(args['--batch_size'])
+    train_voice(run_name, datasets_config, training_dir, batch_size=batch_size)
 
 USAGE = """
 Train GPT XTTS model.
@@ -354,8 +353,9 @@ Usage:
   train_xtts.py [options] <name> <dataset>...
 
 Options:
-  --output=<path>  Directory to save the training output [default: ./run/training/].
-  --device=<device> Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
+  --output=<path>     Directory to save the training output [default: ./run/training/].
+  --device=<device>   Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
+  --batch-size=<size> Batch size for training [default: 9].
 """
 if __name__ == "__main__":
     args = docopt(USAGE)
