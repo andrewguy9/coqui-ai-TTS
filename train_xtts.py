@@ -292,11 +292,12 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
 def check_cuda_devices(device_name: str | None):
     """
     Set CUDA_VISIBLE_DEVICES based on device_name if provided.
-    If device_name is None, use the first available GPU if present, otherwise use CPU.
-    Print a warning if using CPU and a GPU was detected.
+    If the device name is provided overwrite the CUDA_VISIBLE_DEVICES environment variable.
+    If the device_name is omitted defer to the environment variable.
+    If both are omitted, use the first available GPU if present, otherwise use CPU.
     """
     if device_name:
-        # If device_name is like 'cuda:0', extract the GPU index
+        # If device_name is like 'cuda:0', extract the GPU index.
         if device_name.startswith("cuda:"):
             gpu_index = device_name.split(":")[1]
             os.environ["CUDA_VISIBLE_DEVICES"] = gpu_index
@@ -305,14 +306,19 @@ def check_cuda_devices(device_name: str | None):
         else:
             print(f"Unknown device_name format: {device_name}")
     else:
-        if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-            os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+        # If CUDA_VISIBLE_DEVICES is already set, defer to the environment variable.
+        if "CUDA_VISIBLE_DEVICES" in os.environ and os.environ["CUDA_VISIBLE_DEVICES"]:
+            pass  # Use the pre-existing setting.
         else:
-            os.environ["CUDA_VISIBLE_DEVICES"] = ""
-            if torch.cuda.device_count() > 0:
-                print("Warning: No GPU selected, using CPU even though a GPU was detected.")
+            # No device specified and no environment variable set, select default.
+            if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+                os.environ["CUDA_VISIBLE_DEVICES"] = "0"
             else:
-                print("No GPU found. Using CPU.")
+                os.environ["CUDA_VISIBLE_DEVICES"] = ""
+                if torch.cuda.device_count() > 0:
+                    print("Warning: No GPU selected, using CPU even though a GPU was detected.")
+                else:
+                    print("No GPU found. Using CPU.")
 
 import TTS.tts.datasets as td
 def add_formatter(name: str, formatter: Callable) -> None:
@@ -355,7 +361,7 @@ Usage:
 
 Options:
   --output=<path>      Directory to save the training output [default: ./run/training/].
-  --device=<device>    Device to use for training (e.g., cuda:0, cpu) [default: cuda:0].
+  --device=<device>    Device to use for training (e.g., cuda:0, cpu).
   --batch-size=<size>  Batch size for training [default: 9].
   --rank=<rank>        Rank of the process in distributed training.
 """
