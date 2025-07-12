@@ -219,6 +219,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
 
     dataset_speakers: Dict[str, set[str]] = {}
     for sample in train_samples:
+        print(sample)
         speaker_name = sample['speaker_name']
         dataset_name = sample['dataset_name']
         dataset_speakers.setdefault(dataset_name, set()).add(speaker_name)
