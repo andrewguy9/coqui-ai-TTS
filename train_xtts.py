@@ -279,42 +279,45 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         eval_samples=eval_samples,
         test_samples=config.test_sentences,
     )
-    trainer.fit()
-    # Copy reference files to the model directory
-    run_dir= trainer.output_path
-    # TODO all this dataset_name stuff shoud be the speaker name perhaps namespaced by dataset name.
-    for dataset_name, speaker_references in all_speaker_references.items():
-        for emotion, ref_path in speaker_references.items():
-            dst_path = run_dir/ f"{dataset_name}_{emotion}.wav"
-            print("Created reference file:", dst_path)
-            copyfile(ref_path, dst_path)
-        base_reference = run_dir / f"{dataset_name}_reference.wav"
-        copyfile(speaker_references['neutral'], base_reference)
-        print("Created reference file:", base_reference)
+    if rank == 0:
+        # Copy reference files to the model directory
+        run_dir= trainer.output_path
+        # TODO all this dataset_name stuff shoud be the speaker name perhaps namespaced by dataset name.
+        for dataset_name, speaker_references in all_speaker_references.items():
+            for emotion, ref_path in speaker_references.items():
+                dst_path = run_dir/ f"{dataset_name}_{emotion}.wav"
+                print("Created reference file:", dst_path)
+                copyfile(ref_path, dst_path)
+            base_reference = run_dir / f"{dataset_name}_reference.wav"
+            copyfile(speaker_references['neutral'], base_reference)
+            print("Created reference file:", base_reference)
 
-    # Produce an actors.json for the model
-    actors_info = []
-    for dataset_name, speaker_references in all_speaker_references.items():
-        for emotion, ref_path in speaker_references.items():
-            reference_wav = str(run_dir / f"{dataset_name}_reference.wav")
-            emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in Emotion}
-            actor_data = {
-                "name": dataset_name,
-                "voice": dataset_name,
-                "checkpoint_dir": run_dir,
-                "reference_wav": reference_wav,
-                "performance": {
-                    "speed": 1.0,
-                    "temperature": 1.0,
-                    "language": "en" # TODO option
-                },
-                "emotions": emotion_wavs
-            }
-        actors_info.append(actor_data)
-    actors_json_path = run_dir / "actors.json"
-    with actors_json_path.open('w') as f:
-        json.dump(actors_info, f, indent=4)
-    print("Created actors.json:", actors_json_path)
+        # Produce an actors.json for the model
+        actors_info = []
+        for dataset_name, speaker_references in all_speaker_references.items():
+            for emotion, ref_path in speaker_references.items():
+                reference_wav = str(run_dir / f"{dataset_name}_reference.wav")
+                emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in Emotion}
+                actor_data = {
+                    "name": dataset_name,
+                    "voice": dataset_name,
+                    "checkpoint_dir": run_dir,
+                    "reference_wav": reference_wav,
+                    "performance": {
+                        "speed": 1.0,
+                        "temperature": 1.0,
+                        "language": "en" # TODO option
+                    },
+                    "emotions": emotion_wavs
+                }
+            actors_info.append(actor_data)
+        actors_json_path = run_dir / "actors.json"
+        with actors_json_path.open('w') as f:
+            json.dump(actors_info, f, indent=4)
+        print("Created actors.json:", actors_json_path)
+
+    # Train the model
+    trainer.fit()
 
 def check_cuda_devices(device_name: str | None):
     """
