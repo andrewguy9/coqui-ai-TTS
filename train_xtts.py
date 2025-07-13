@@ -299,7 +299,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         for dataset_name, speaker_references in all_speaker_references.items():
             for emotion, ref_path in speaker_references.items():
                 reference_wav = str(run_dir / f"{dataset_name}_reference.wav")
-                emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in get_args(Emotion)}
+                emotion_wavs = {emotion: str(f"{dataset_name}_{emotion}.wav") for emotion in get_args(Emotion)}
                 actor_data = {
                     "name": dataset_name,
                     "voice": dataset_name,
