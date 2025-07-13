@@ -32,8 +32,6 @@ def find_tokenizer_file(config: Coqpit) -> Path:
     vocab_path = Path(model_args.get('tokenizer_file'))
     if not vocab_path.is_file():
         raise FileNotFoundError(f"Tokenizer file {vocab_path} not found")
-    if not vocab_path.is_absolute():
-        raise ValueError(f"Tokenizer file {vocab_path} must be an absolute path.")
     return vocab_path
 
 def copy_vocab_file(old_vocab_path: Path, output_dir: Path):
