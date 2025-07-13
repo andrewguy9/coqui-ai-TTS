@@ -127,7 +127,7 @@ def actors_inline_reference(input_path: Path, output_path: Path):
         "name": actor['name'],
         "voice": actor['voice'],
         # "model_name": actor['model_name'],
-        "checkpoint_dir": "finetunes/deebee_nelson",
+        "checkpoint_dir": ".",
         "performance": {
             "speed": 1.0,
             "temperature": 1.0,
