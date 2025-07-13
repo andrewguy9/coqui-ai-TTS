@@ -157,7 +157,8 @@ def export_xtts_weights_minified2(config, weights_path: Path, actors_path: Path,
 
     # 2. Calculate latents for any speaker references.
     speaker_latents = calculate_speaker_latents(actors_path, model)
-    torch.save(speaker_latents, out_dir / "speaker_latents.pth")
+    latents_struct = {"speakers": speaker_latents}
+    torch.save(latents_struct, out_dir / "speaker_latents.pth")
 
     # 3. Build a minimal but _compatible_ checkpoint.
     ckpt = {
