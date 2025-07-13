@@ -16,11 +16,11 @@ def find_best_ckpt(run_dir):
     best = glob.glob(os.path.join(run_dir, "best_model.pth"))
     if not best:
         raise FileNotFoundError(f"No best model found in {run_dir}")
-    best_path = run_dir / Path(best[0])
+    best_path = Path(best[0])
     config = glob.glob(os.path.join(run_dir, "config.json"))
     if not config:
         raise FileNotFoundError(f"No config file found in {run_dir}")
-    config_path = run_dir / Path(config[0])
+    config_path = Path(config[0])
     return config_path, best_path
 
 def find_tokenizer_file(config: Coqpit) -> Path:
@@ -227,6 +227,7 @@ def main(args):
         if len(runs) > 1:
             raise ValueError(f"Multiple runs found for model {model_name} in directory {run_dir}. Please specify a unique run.")
         src_dir = runs[0]
+        print("Found run directory:", src_dir)
 
         output_dir = dist_dir / model_name
         output_dir.mkdir(parents=True, exist_ok=True)
