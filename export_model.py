@@ -90,11 +90,59 @@ def export_xtts_weights_minified(config, weights_path: Path, out_dir: Path):
     torch.save(model.state_dict(), new_weights_path)
     return new_weights_path
 
+from typing import Dict, Tuple
+def calculate_speaker_latents(actors_path: Path, model: Xtts) -> Dict[str, Dict[str, torch.Tensor]]:
+    """
+    Calculate speaker latents from the actors.json file.
+    Returns a dictionary mapping actor names to their latents.
+    """
+    with actors_path.open('r') as f:
+        actors = json.load(f)
+    
+    speaker_latents = {}
+    for actor in actors:
+        name = actor['name']
+        # TODO only use the base reference wav file.
+        reference_wavs = [Path(actor['reference_wav'])]
+        gpt_cond_latent, speaker_embedding = model.get_conditioning_latents(reference_wavs)
+        speaker_latents[name] = {
+            "gpt_cond_latent": gpt_cond_latent.cpu(),
+            "speaker_embedding": speaker_embedding.cpu()
+        }
+    return speaker_latents
+
 from pathlib import Path
 import torch
 from TTS.tts.models.xtts import Xtts  # or wherever you import Xtts from
 
-def export_xtts_weights_minified2(config, weights_path: Path, out_dir: Path):
+def actors_inline_reference(input_path: Path, output_path: Path):
+    """
+    Convert actors.json from using reference_wav to being aware of the inlined latents.
+    This makes them loadable by StoryTeller without needing the original reference wav files.
+    """
+    with input_path.open('r') as f:
+        actors = json.load(f)
+
+    out_actors = []
+    for actor in actors:
+        out_actor = {
+        "name": actor['name'],
+        "voice": actor['voice'],
+        # "model_name": actor['model_name'],
+        "checkpoint_dir": "finetunes/deebee_nelson",
+        "performance": {
+            "speed": 1.0,
+            "temperature": 1.0,
+            "language": "en" # TODO option
+        }
+    }
+    out_actors.append(out_actor)
+
+    with (output_path / "actors.json").open('w') as f:
+        json.dump(out_actors, f, indent=4)
+
+
+def export_xtts_weights_minified2(config, weights_path: Path, actors_path: Path, out_dir: Path):
     """
     Strip the unused DVAE blocks but keep a valid checkpoint layout for XTTS inference.
     """
@@ -109,7 +157,11 @@ def export_xtts_weights_minified2(config, weights_path: Path, out_dir: Path):
         # keep_dvae=False   # if the loader supports dropping DVAE already
     )
 
-    # 2. Build a minimal but _compatible_ checkpoint.
+    # 2. Calculate latents for any speaker references.
+    speaker_latents = calculate_speaker_latents(actors_path, model)
+    torch.save(speaker_latents, out_dir / "speaker_latents.pth")
+
+    # 3. Build a minimal but _compatible_ checkpoint.
     ckpt = {
         "model": model.state_dict(),          # mandatory
         "mel_stats": getattr(model, "mel_stats", None),  # optional but handy
@@ -119,9 +171,14 @@ def export_xtts_weights_minified2(config, weights_path: Path, out_dir: Path):
         # "optimizer": None,
     }
 
-    # 3. Save it.
+    # 4. Save it.
     new_weights_path = out_dir / "model.pth"
     torch.save(ckpt, new_weights_path)
+
+    # 5. Produce an acttors.json file.
+    actors_inline_reference(actors_path, out_dir) 
+
+    # 6. Return the path to the new weights.
     return new_weights_path
 
 def export_xtts_model_config(config, new_vocab_path: Path, new_weights_path: Path, out_dir: Path):
@@ -147,9 +204,10 @@ def export_xtts_finetune(run_dir: Path, src_dir: Path, out_dir: Path):
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     config_path, best_path = find_best_ckpt(src_dir)
+    actors_path = src_dir / "actors.json"
     config = load_config(config_path)
     new_vocab_path = export_xtts_tokenizer(run_dir, config, out_dir)
-    new_best_path = export_xtts_weights_minified2(config, best_path, out_dir)
+    new_best_path = export_xtts_weights_minified2(config, best_path, actors_path, out_dir)
     export_xtts_model_config(config, new_vocab_path, new_best_path, out_dir)
 
 def main(args):
