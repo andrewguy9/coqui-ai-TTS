@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 import sys
 from typing import Dict, List
+from typing_extensions import get_args
 
 from trainer import Trainer, TrainerArgs
 
@@ -263,6 +264,7 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
     # init the model from config
     model = GPTTrainer.init_from_config(config)
 
+    # TODO output path comes from get_experiment_folder_path in trainer/generic_utils.py. See remove_experiment_folder, count_parameters 
     # init the trainer and 🚀
     trainer = Trainer(
         TrainerArgs(
@@ -297,12 +299,12 @@ def train_voice(run_name: str, datasets_config: List[BaseDatasetConfig], trainin
         for dataset_name, speaker_references in all_speaker_references.items():
             for emotion, ref_path in speaker_references.items():
                 reference_wav = str(run_dir / f"{dataset_name}_reference.wav")
-                emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in Emotion}
+                emotion_wavs = {emotion: str(run_dir / f"{dataset_name}_{emotion}.wav") for emotion in get_args(Emotion)}
                 actor_data = {
                     "name": dataset_name,
                     "voice": dataset_name,
-                    "checkpoint_dir": run_dir,
-                    "reference_wav": reference_wav,
+                    "checkpoint_dir": str(run_dir),
+                    "reference_wav": str(reference_wav),
                     "performance": {
                         "speed": 1.0,
                         "temperature": 1.0,
