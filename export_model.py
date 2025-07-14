@@ -132,9 +132,9 @@ def actors_inline_reference(input_path: Path, output_path: Path):
             "speed": 1.0,
             "temperature": 1.0,
             "language": "en" # TODO option
+            }
         }
-    }
-    out_actors.append(out_actor)
+        out_actors.append(out_actor)
 
     with (output_path / "actors.json").open('w') as f:
         json.dump(out_actors, f, indent=4)
